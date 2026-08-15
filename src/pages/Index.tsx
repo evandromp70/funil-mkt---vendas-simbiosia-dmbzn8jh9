@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
-import { createLead, deleteLead, getLeads, Lead } from '@/services/leads'
+import { createLead, deleteLead, getLeads, Lead, ETAPA_LABEL } from '@/services/leads'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,17 +16,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-const ETAPA_LABEL: Record<string, string> = {
-  lista: 'Lista',
-  qualificacao: 'Qualificação',
-  contato: 'Contato',
-  cadencia: 'Cadência',
-  alinhamento: 'Alinhamento',
-  conversao: 'Conversão',
-  ganho: 'Ganho',
-  perdido: 'Perdido',
-}
-
 const ETAPA_VARIANT: Record<string, 'secondary' | 'default' | 'outline' | 'destructive'> = {
   lista: 'secondary',
   qualificacao: 'secondary',
@@ -36,6 +25,17 @@ const ETAPA_VARIANT: Record<string, 'secondary' | 'default' | 'outline' | 'destr
   conversao: 'default',
   ganho: 'default',
   perdido: 'destructive',
+}
+
+type Ordenacao = 'recentes' | 'antigos' | 'alfabetica' | 'score_desc' | 'score_asc' | 'etapa'
+
+const ORDENACAO_LABEL: Record<Ordenacao, string> = {
+  recentes: 'Mais recentes',
+  antigos: 'Mais antigos',
+  alfabetica: 'Ordem alfabética (A–Z)',
+  score_desc: 'Score (maior → menor)',
+  score_asc: 'Score (menor → maior)',
+  etapa: 'Etapa da jornada',
 }
 
 export default function Index() {
@@ -53,6 +53,12 @@ export default function Index() {
   const [origem, setOrigem] = useState<'inbound' | 'outbound' | ''>('')
   const [observacoes, setObservacoes] = useState('')
 
+  // busca / filtro / ordenação
+  const [busca, setBusca] = useState('')
+  const [filtroEtapa, setFiltroEtapa] = useState('')
+  const [filtroOrigem, setFiltroOrigem] = useState('')
+  const [ordenacao, setOrdenacao] = useState<Ordenacao>('recentes')
+
   const loadLeads = async () => {
     setLoading(true)
     try {
@@ -69,6 +75,61 @@ export default function Index() {
   useEffect(() => {
     loadLeads()
   }, [])
+
+  const leadsFiltrados = useMemo(() => {
+    let lista = [...leads]
+    const q = busca.trim().toLowerCase()
+    if (q) {
+      lista = lista.filter(
+        (l) =>
+          l.nome_empresa.toLowerCase().includes(q) ||
+          (l.contato_nome || '').toLowerCase().includes(q) ||
+          (l.contato_email || '').toLowerCase().includes(q),
+      )
+    }
+    if (filtroEtapa) {
+      lista = lista.filter((l) => l.etapa === filtroEtapa)
+    }
+    if (filtroOrigem) {
+      lista = lista.filter((l) => l.origem === filtroOrigem)
+    }
+    const ordemEtapa: Record<string, number> = {
+      lista: 0,
+      qualificacao: 1,
+      contato: 2,
+      cadencia: 3,
+      alinhamento: 4,
+      conversao: 5,
+      ganho: 6,
+      perdido: 7,
+    }
+    switch (ordenacao) {
+      case 'antigos':
+        lista.sort((a, b) => a.created.localeCompare(b.created))
+        break
+      case 'alfabetica':
+        lista.sort((a, b) => a.nome_empresa.localeCompare(b.nome_empresa, 'pt-BR'))
+        break
+      case 'score_desc':
+        lista.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+        break
+      case 'score_asc':
+        lista.sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
+        break
+      case 'etapa':
+        lista.sort(
+          (a, b) =>
+            (ordemEtapa[a.etapa] ?? 99) - (ordemEtapa[b.etapa] ?? 99) ||
+            a.nome_empresa.localeCompare(b.nome_empresa, 'pt-BR'),
+        )
+        break
+      case 'recentes':
+      default:
+        lista.sort((a, b) => b.created.localeCompare(a.created))
+        break
+    }
+    return lista
+  }, [leads, busca, filtroEtapa, filtroOrigem, ordenacao])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -206,19 +267,78 @@ export default function Index() {
         <CardHeader>
           <CardTitle className="text-base">Leads cadastrados</CardTitle>
           <CardDescription>
-            {leads.length} no sistema. Dados persistem após recarregar a página.
+            {leads.length} no sistema · {leadsFiltrados.length} exibidos. Dados persistem após
+            recarregar a página.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Busca, filtros e ordenação */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <Label>Buscar lead</Label>
+              <Input
+                placeholder="Nome da empresa, contato, e-mail..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Etapa</Label>
+              <Select value={filtroEtapa} onValueChange={(v) => setFiltroEtapa(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas</SelectItem>
+                  {Object.entries(ETAPA_LABEL).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>
+                      {v}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Origem</Label>
+              <Select value={filtroOrigem} onValueChange={(v) => setFiltroOrigem(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="inbound">Inbound</SelectItem>
+                  <SelectItem value="outbound">Outbound</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Ordenar por</Label>
+              <Select value={ordenacao} onValueChange={(v) => setOrdenacao(v as Ordenacao)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ORDENACAO_LABEL).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>
+                      {v}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {loading ? (
             <p className="text-sm text-muted-foreground">Carregando...</p>
-          ) : leads.length === 0 ? (
+          ) : leadsFiltrados.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Nenhum lead ainda. Cadastre o primeiro acima.
+              {busca || filtroEtapa || filtroOrigem
+                ? 'Nenhum lead encontrado com esses critérios.'
+                : 'Nenhum lead ainda. Cadastre o primeiro acima.'}
             </p>
           ) : (
             <div className="space-y-3">
-              {leads.map((lead) => (
+              {leadsFiltrados.map((lead) => (
                 <div
                   key={lead.id}
                   className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-4 transition-colors hover:border-[#10454f]/40 hover:bg-slate-100/60"
