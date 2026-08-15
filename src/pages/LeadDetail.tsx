@@ -834,12 +834,6 @@ export default function LeadDetail() {
           </CardHeader>
         </Card>
       )}
-
-      {!isOwner && (
-        <p className="text-sm text-muted-foreground">
-          Você não é o responsável por este lead (somente leitura de detalhes).
-        </p>
-      )}
     </div>
   )
 }
