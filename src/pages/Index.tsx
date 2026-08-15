@@ -53,6 +53,7 @@ export default function Index() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [saving, setSaving] = useState(false)
 
   const [nomeEmpresa, setNomeEmpresa] = useState('')
