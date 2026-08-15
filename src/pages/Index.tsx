@@ -6,6 +6,7 @@ import {
   deleteLead,
   getLeads,
   getUsuarios,
+  atribuirLote,
   Lead,
   Usuario,
   ETAPA_LABEL,
@@ -66,10 +67,18 @@ export default function Index() {
   const [filtroEtapa, setFiltroEtapa] = useState('')
   const [filtroOrigem, setFiltroOrigem] = useState('')
   const [filtroDono, setFiltroDono] = useState('')
+  const [filtroSegmento, setFiltroSegmento] = useState('')
+  const [filtroUf, setFiltroUf] = useState('')
   const [ordenacao, setOrdenacao] = useState<Ordenacao>('recentes')
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
 
+  // seleção múltipla + atribuição em lote
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  const [vendedorAlvo, setVendedorAlvo] = useState('')
+  const [atribuindo, setAtribuindo] = useState(false)
+
   const ehAdmin = user?.role === 'admin'
+  const vendedores = usuarios.filter((u) => u.role === 'vendedor')
 
   const loadLeads = async () => {
     setLoading(true)
@@ -113,6 +122,12 @@ export default function Index() {
     if (filtroDono && ehAdmin) {
       lista = lista.filter((l) => l.owner === filtroDono)
     }
+    if (filtroSegmento) {
+      lista = lista.filter((l) => (l.segmento || '').toLowerCase() === filtroSegmento.toLowerCase())
+    }
+    if (filtroUf) {
+      lista = lista.filter((l) => (l.uf || '').toUpperCase() === filtroUf.toUpperCase())
+    }
     const ordemEtapa: Record<string, number> = {
       lista: 0,
       qualificacao: 1,
@@ -149,7 +164,17 @@ export default function Index() {
         break
     }
     return lista
-  }, [leads, busca, filtroEtapa, filtroOrigem, filtroDono, ordenacao, ehAdmin])
+  }, [
+    leads,
+    busca,
+    filtroEtapa,
+    filtroOrigem,
+    filtroDono,
+    filtroSegmento,
+    filtroUf,
+    ordenacao,
+    ehAdmin,
+  ])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -191,6 +216,46 @@ export default function Index() {
       await loadLeads()
     } catch (e) {
       setError('Não foi possível excluir.')
+    }
+  }
+
+  const toggleSelecionado = (id: string) => {
+    setSelecionados((prev) => {
+      const novo = new Set(prev)
+      if (novo.has(id)) {
+        novo.delete(id)
+      } else {
+        novo.add(id)
+      }
+      return novo
+    })
+  }
+
+  const onAtribuirLote = async () => {
+    if (selecionados.size === 0 || !vendedorAlvo) {
+      setError('Selecione leads e um vendedor.')
+      return
+    }
+    if (
+      !confirm(
+        `Atribuir ${selecionados.size} lead(s) a ${vendedores.find((v) => v.id === vendedorAlvo)?.name || 'vendedor'}?`,
+      )
+    ) {
+      return
+    }
+    setAtribuindo(true)
+    setError('')
+    try {
+      const data = await atribuirLote(Array.from(selecionados), vendedorAlvo)
+      setNotice(`${data.atribuidos} lead(s) atribuído(s) com sucesso.`)
+      setTimeout(() => setNotice(''), 4000)
+      setSelecionados(new Set())
+      setVendedorAlvo('')
+      await loadLeads()
+    } catch (e) {
+      setError('Não foi possível atribuir os leads.')
+    } finally {
+      setAtribuindo(false)
     }
   }
 
@@ -274,6 +339,7 @@ export default function Index() {
               />
             </div>
             {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
+            {notice && <p className="text-sm text-green-700 sm:col-span-2">{notice}</p>}
             <div className="sm:col-span-2">
               <Button type="submit" className="bg-[#10454f] hover:bg-[#0d3942]" disabled={saving}>
                 {saving ? 'Salvando...' : 'Salvar lead'}
@@ -293,7 +359,7 @@ export default function Index() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Busca, filtros e ordenação */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1">
               <Label>Buscar lead</Label>
               <Input
@@ -350,6 +416,38 @@ export default function Index() {
               </div>
             )}
             <div className="space-y-1">
+              <Label>Segmento</Label>
+              <Select value={filtroSegmento} onValueChange={(v) => setFiltroSegmento(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  {Array.from(new Set(leads.map((l) => l.segmento).filter(Boolean))).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Região (UF)</Label>
+              <Select value={filtroUf} onValueChange={(v) => setFiltroUf(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas</SelectItem>
+                  {Array.from(new Set(leads.map((l) => l.uf).filter(Boolean))).map((uf) => (
+                    <SelectItem key={uf} value={uf}>
+                      {uf}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <Label>Ordenar por</Label>
               <Select value={ordenacao} onValueChange={(v) => setOrdenacao(v as Ordenacao)}>
                 <SelectTrigger>
@@ -366,6 +464,41 @@ export default function Index() {
             </div>
           </div>
 
+          {/* Barra de atribuição em lote (admin) */}
+          {ehAdmin && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-slate-50 p-3">
+              <span className="text-sm font-medium">
+                {selecionados.size > 0 ? `${selecionados.size} selecionado(s)` : 'Selecione leads'}
+              </span>
+              <Select value={vendedorAlvo} onValueChange={(v) => setVendedorAlvo(v)}>
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="Atribuir a..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {vendedores.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.name || v.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onAtribuirLote}
+                disabled={atribuindo || selecionados.size === 0 || !vendedorAlvo}
+                className="bg-[#bde038] text-[#10454f] hover:bg-[#a5cc2c]"
+              >
+                {atribuindo ? 'Atribuindo...' : 'Atribuir aos selecionados'}
+              </Button>
+              {selecionados.size > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setSelecionados(new Set())}>
+                  Limpar seleção
+                </Button>
+              )}
+            </div>
+          )}
+
           {loading ? (
             <p className="text-sm text-muted-foreground">Carregando...</p>
           ) : leadsFiltrados.length === 0 ? (
@@ -379,9 +512,20 @@ export default function Index() {
               {leadsFiltrados.map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-4 transition-colors hover:border-[#10454f]/40 hover:bg-slate-100/60"
+                  className={`flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-4 transition-colors hover:border-[#10454f]/40 hover:bg-slate-100/60 ${
+                    selecionados.has(lead.id) ? 'border-[#10454f] bg-[#10454f]/5' : ''
+                  }`}
                   onClick={() => navigate(`/leads/${lead.id}`)}
                 >
+                  {ehAdmin && (
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 shrink-0"
+                      checked={selecionados.has(lead.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleSelecionado(lead.id)}
+                    />
+                  )}
                   <div>
                     <Link
                       to={`/leads/${lead.id}`}
@@ -394,6 +538,11 @@ export default function Index() {
                       {lead.contato_nome || '—'}{' '}
                       {lead.contato_email ? `· ${lead.contato_email}` : ''}
                     </p>
+                    {(lead.segmento || lead.uf || lead.cidade) && (
+                      <p className="text-xs text-muted-foreground">
+                        {[lead.segmento, lead.cidade, lead.uf].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Badge variant={lead.origem === 'inbound' ? 'default' : 'secondary'}>
                         {lead.origem === 'inbound' ? 'Inbound' : 'Outbound'}
@@ -402,6 +551,11 @@ export default function Index() {
                         {ETAPA_LABEL[lead.etapa] ?? lead.etapa}
                       </Badge>
                       {lead.score != null && <Badge variant="outline">Score {lead.score}</Badge>}
+                      {lead.lista_origem && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {lead.lista_origem}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <Button

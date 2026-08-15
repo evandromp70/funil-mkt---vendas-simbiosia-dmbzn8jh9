@@ -19,6 +19,10 @@ export type Lead = {
     | 'perdido'
   score?: number
   observacoes?: string
+  segmento?: string
+  uf?: string
+  cidade?: string
+  lista_origem?: string
   created: string
   updated: string
 }
@@ -197,3 +201,14 @@ export const createUsuario = (data: {
 
 export const updateUsuarioRole = (id: string, role: 'admin' | 'vendedor') =>
   pb.collection('users').update<Usuario>(id, { role })
+
+// ---- Atribuição em lote (só admin) ----
+
+export const atribuirLote = (leadIds: string[], vendedorId: string) =>
+  pb.send<{ atribuidos: number; erros: number; vendedorId: string }>(
+    '/backend/v1/funil/atribuir-lote',
+    {
+      method: 'POST',
+      body: JSON.stringify({ leadIds, vendedorId }),
+    },
+  )

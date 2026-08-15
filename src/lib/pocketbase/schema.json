@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-15T19:05:54.889Z",
+  "generatedAt": "2026-08-15T19:27:07.796Z",
   "collections": [
     {
       "name": "users",
@@ -157,6 +157,30 @@
             "onCreate",
             "onUpdate"
           ]
+        },
+        {
+          "name": "segmento",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lista_origem",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
