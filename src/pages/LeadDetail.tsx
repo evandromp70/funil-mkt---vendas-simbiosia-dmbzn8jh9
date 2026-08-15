@@ -145,6 +145,19 @@ export default function LeadDetail() {
     }
   }
 
+  const moverEtapa = async (etapa: Lead['etapa']) => {
+    if (etapa === lead.etapa) return
+    const terminal = etapa === 'ganho' || etapa === 'perdido'
+    if (terminal && !confirm(`Mover este lead para "${ETAPA_LABEL[etapa]}"?`)) return
+    setError('')
+    try {
+      await updateLead(lead.id, { etapa })
+      await loadAll()
+    } catch (e) {
+      setError('Não foi possível mover o lead para ' + ETAPA_LABEL[etapa] + '.')
+    }
+  }
+
   const marcarPerdido = async () => {
     setError('')
     try {
@@ -321,21 +334,41 @@ export default function LeadDetail() {
         <CardHeader>
           <CardTitle className="text-base">Jornada do lead</CardTitle>
           <CardDescription>
-            Etapa atual: <strong>{ETAPA_LABEL[lead.etapa]}</strong>. Avance conforme o fluxo
-            acontece.
+            Etapa atual: <strong>{ETAPA_LABEL[lead.etapa]}</strong>. Avance ou volte conforme o
+            fluxo acontece.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {FLUXO.map((f) => {
-              const done = FLUXO.indexOf(f) < idx
               const current = f.etapa === lead.etapa
               return (
-                <Badge key={f.etapa} variant={current ? 'default' : done ? 'secondary' : 'outline'}>
+                <button
+                  key={f.etapa}
+                  type="button"
+                  onClick={() => moverEtapa(f.etapa)}
+                  className={
+                    'rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ' +
+                    (current
+                      ? 'cursor-default border-transparent bg-[#10454f] text-white'
+                      : 'cursor-pointer border-input bg-background text-foreground hover:bg-slate-100')
+                  }
+                  title={'Mover para ' + f.label}
+                >
                   {f.label}
-                </Badge>
+                </button>
               )
             })}
+            {lead.etapa !== 'perdido' && (
+              <button
+                type="button"
+                onClick={() => moverEtapa('perdido')}
+                className="cursor-pointer rounded-full border border-input bg-background px-2.5 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-red-50 hover:text-red-700"
+                title="Marcar como perdido"
+              >
+                Perdido
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {nextEtapa && (
@@ -349,6 +382,10 @@ export default function LeadDetail() {
               </Button>
             )}
           </div>
+          <p className="text-xs text-muted-foreground">
+            Dica: clique em qualquer etapa para mover o lead (avançar ou voltar). Etapas finais
+            (Ganho/Perdido) pedem confirmação.
+          </p>
         </CardContent>
       </Card>
 
