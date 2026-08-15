@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { createLead, deleteLead, getLeads, Lead } from '@/services/leads'
 import { Button } from '@/components/ui/button'
@@ -222,7 +223,9 @@ export default function Index() {
                   className="flex items-center justify-between gap-4 rounded-lg border p-4"
                 >
                   <div>
-                    <p className="font-medium">{lead.nome_empresa}</p>
+                    <Link to={`/leads/${lead.id}`} className="font-medium hover:text-[#10454f]">
+                      {lead.nome_empresa}
+                    </Link>
                     <p className="text-sm text-muted-foreground">
                       {lead.contato_nome || '—'}{' '}
                       {lead.contato_email ? `· ${lead.contato_email}` : ''}

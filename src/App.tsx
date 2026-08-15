@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider, useAuth } from './hooks/use-auth'
 import Index from './pages/Index'
 import Login from './pages/Login'
+import LeadDetail from './pages/LeadDetail'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -35,6 +36,14 @@ const App = () => (
               }
             />
             <Route path="/login" element={<Login />} />
+            <Route
+              path="/leads/:id"
+              element={
+                <Protected>
+                  <LeadDetail />
+                </Protected>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES MUST BE ADDED HERE */}
           </Route>
           <Route path="*" element={<NotFound />} />
