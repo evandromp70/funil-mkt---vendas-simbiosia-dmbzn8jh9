@@ -173,3 +173,27 @@ export const analisarQualificacao = (leadId: string) =>
     method: 'POST',
     body: JSON.stringify({ leadId }),
   })
+
+// ---- Usuários e níveis de acesso ----
+
+export type Usuario = {
+  id: string
+  email: string
+  name?: string
+  role: 'admin' | 'vendedor'
+  created: string
+  updated: string
+}
+
+export const getUsuarios = () => pb.collection('users').getFullList<Usuario>({ sort: 'name' })
+
+export const createUsuario = (data: {
+  email: string
+  password: string
+  passwordConfirm: string
+  name: string
+  role: 'admin' | 'vendedor'
+}) => pb.collection('users').create<Usuario>(data)
+
+export const updateUsuarioRole = (id: string, role: 'admin' | 'vendedor') =>
+  pb.collection('users').update<Usuario>(id, { role })

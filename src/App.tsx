@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './hooks/use-auth'
 import Index from './pages/Index'
 import Login from './pages/Login'
 import LeadDetail from './pages/LeadDetail'
+import Usuarios from './pages/Usuarios'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -41,6 +42,14 @@ const App = () => (
               element={
                 <Protected>
                   <LeadDetail />
+                </Protected>
+              }
+            />
+            <Route
+              path="/usuarios"
+              element={
+                <Protected>
+                  <Usuarios />
                 </Protected>
               }
             />

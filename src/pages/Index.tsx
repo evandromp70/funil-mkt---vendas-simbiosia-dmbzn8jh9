@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
-import { createLead, deleteLead, getLeads, Lead, ETAPA_LABEL } from '@/services/leads'
+import {
+  createLead,
+  deleteLead,
+  getLeads,
+  getUsuarios,
+  Lead,
+  Usuario,
+  ETAPA_LABEL,
+} from '@/services/leads'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,7 +65,11 @@ export default function Index() {
   const [busca, setBusca] = useState('')
   const [filtroEtapa, setFiltroEtapa] = useState('')
   const [filtroOrigem, setFiltroOrigem] = useState('')
+  const [filtroDono, setFiltroDono] = useState('')
   const [ordenacao, setOrdenacao] = useState<Ordenacao>('recentes')
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+
+  const ehAdmin = user?.role === 'admin'
 
   const loadLeads = async () => {
     setLoading(true)
@@ -74,7 +86,12 @@ export default function Index() {
 
   useEffect(() => {
     loadLeads()
-  }, [])
+    if (user?.role === 'admin') {
+      getUsuarios()
+        .then(setUsuarios)
+        .catch(() => {})
+    }
+  }, [user?.role])
 
   const leadsFiltrados = useMemo(() => {
     let lista = [...leads]
@@ -92,6 +109,9 @@ export default function Index() {
     }
     if (filtroOrigem) {
       lista = lista.filter((l) => l.origem === filtroOrigem)
+    }
+    if (filtroDono && ehAdmin) {
+      lista = lista.filter((l) => l.owner === filtroDono)
     }
     const ordemEtapa: Record<string, number> = {
       lista: 0,
@@ -129,7 +149,7 @@ export default function Index() {
         break
     }
     return lista
-  }, [leads, busca, filtroEtapa, filtroOrigem, ordenacao])
+  }, [leads, busca, filtroEtapa, filtroOrigem, filtroDono, ordenacao, ehAdmin])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -273,7 +293,7 @@ export default function Index() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Busca, filtros e ordenação */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-1">
               <Label>Buscar lead</Label>
               <Input
@@ -311,6 +331,24 @@ export default function Index() {
                 </SelectContent>
               </Select>
             </div>
+            {ehAdmin && (
+              <div className="space-y-1">
+                <Label>Dono</Label>
+                <Select value={filtroDono} onValueChange={(v) => setFiltroDono(v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos</SelectItem>
+                    {usuarios.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name || u.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
               <Label>Ordenar por</Label>
               <Select value={ordenacao} onValueChange={(v) => setOrdenacao(v as Ordenacao)}>

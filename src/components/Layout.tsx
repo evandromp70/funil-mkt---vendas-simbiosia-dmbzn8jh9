@@ -25,6 +25,9 @@ export default function Layout() {
                 <Link to="/" className="hover:text-[#10454f]">
                   Leads
                 </Link>
+                <Link to="/usuarios" className="hover:text-[#10454f]">
+                  Usuários
+                </Link>
               </nav>
               <Button
                 variant="outline"
