@@ -14,9 +14,8 @@ routerAdd(
       return e.notFoundError('Lead não encontrado')
     }
 
-    const ownerId = lead.getString('owner')
-    if (!e.auth || e.auth.id !== ownerId) {
-      return e.forbiddenError('Você não tem acesso a este lead')
+    if (!e.auth) {
+      return e.unauthorizedError('Autenticação necessária')
     }
 
     // Histórico de cadência do lead

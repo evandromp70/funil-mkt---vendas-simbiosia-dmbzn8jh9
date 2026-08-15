@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-15T14:24:26.728Z",
+  "generatedAt": "2026-08-15T14:55:27.085Z",
   "collections": [
     {
       "name": "users",
@@ -29,14 +29,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": [
@@ -51,8 +56,8 @@
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && owner = @request.auth.id",
-        "delete": "@request.auth.id != '' && owner = @request.auth.id"
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
       },
       "fields": [
         {
@@ -91,7 +96,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "etapa",
@@ -126,14 +134,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": [
@@ -148,8 +161,8 @@
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && owner = @request.auth.id",
-        "delete": "@request.auth.id != '' && owner = @request.auth.id"
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
       },
       "fields": [
         {
@@ -170,7 +183,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "segmento",
@@ -189,17 +205,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_listas_owner ON listas (owner)"]
+      "indexes": [
+        "CREATE INDEX idx_listas_owner ON listas (owner)"
+      ]
     },
     {
       "name": "qualificacoes",
@@ -208,8 +231,8 @@
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && owner = @request.auth.id",
-        "delete": "@request.auth.id != '' && owner = @request.auth.id"
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
       },
       "fields": [
         {
@@ -267,7 +290,11 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["qualificado", "nao_qualificado", "revisar"]
+          "selectValues": [
+            "qualificado",
+            "nao_qualificado",
+            "revisar"
+          ]
         },
         {
           "name": "notas",
@@ -280,17 +307,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_qualificacoes_lead ON qualificacoes (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_qualificacoes_lead ON qualificacoes (lead)"
+      ]
     },
     {
       "name": "contatos",
@@ -299,8 +333,8 @@
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && owner = @request.auth.id",
-        "delete": "@request.auth.id != '' && owner = @request.auth.id"
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
       },
       "fields": [
         {
@@ -322,14 +356,23 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["email", "linkedin", "whatsapp", "telefone", "evento"]
+          "selectValues": [
+            "email",
+            "linkedin",
+            "whatsapp",
+            "telefone",
+            "evento"
+          ]
         },
         {
           "name": "direcao",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "mensagem",
@@ -354,17 +397,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_contatos_lead ON contatos (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_contatos_lead ON contatos (lead)"
+      ]
     },
     {
       "name": "cadencias",
@@ -373,8 +423,8 @@
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && owner = @request.auth.id",
-        "delete": "@request.auth.id != '' && owner = @request.auth.id"
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
       },
       "fields": [
         {
@@ -402,14 +452,25 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["email", "linkedin", "whatsapp", "telefone"]
+          "selectValues": [
+            "email",
+            "linkedin",
+            "whatsapp",
+            "telefone"
+          ]
         },
         {
           "name": "status",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["agendado", "enviado", "respondido", "ignorado", "cancelado"]
+          "selectValues": [
+            "agendado",
+            "enviado",
+            "respondido",
+            "ignorado",
+            "cancelado"
+          ]
         },
         {
           "name": "rascunho_ia",
@@ -428,17 +489,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_cadencias_lead ON cadencias (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_cadencias_lead ON cadencias (lead)"
+      ]
     },
     {
       "name": "alinhamentos",
@@ -447,8 +515,8 @@
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && owner = @request.auth.id",
-        "delete": "@request.auth.id != '' && owner = @request.auth.id"
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
       },
       "fields": [
         {
@@ -494,17 +562,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_alinhamentos_lead ON alinhamentos (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_alinhamentos_lead ON alinhamentos (lead)"
+      ]
     }
   ]
 }

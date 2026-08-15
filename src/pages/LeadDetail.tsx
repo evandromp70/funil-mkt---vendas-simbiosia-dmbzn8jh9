@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
 import {
   getLead,
   updateLead,
@@ -40,7 +39,6 @@ import { Badge } from '@/components/ui/badge'
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
 
   const [lead, setLead] = useState<Lead | null>(null)
   const [qualificacoes, setQualificacoes] = useState<Qualificacao[]>([])
@@ -121,7 +119,6 @@ export default function LeadDetail() {
   if (loading) return <p className="text-muted-foreground">Carregando...</p>
   if (!lead) return <p className="text-red-600">Lead não encontrado.</p>
 
-  const isOwner = user?.id === lead.owner
   const idx = FLUXO.findIndex((f) => f.etapa === lead.etapa)
   const nextEtapa = idx >= 0 && idx < FLUXO.length - 1 ? FLUXO[idx + 1].etapa : null
 

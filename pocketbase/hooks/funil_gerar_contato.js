@@ -15,9 +15,8 @@ routerAdd(
     }
 
     // Só o dono do lead pode gerar rascunho
-    const ownerId = lead.getString('owner')
-    if (!e.auth || e.auth.id !== ownerId) {
-      return e.forbiddenError('Você não tem acesso a este lead')
+    if (!e.auth) {
+      return e.unauthorizedError('Autenticação necessária')
     }
 
     const prompt =
