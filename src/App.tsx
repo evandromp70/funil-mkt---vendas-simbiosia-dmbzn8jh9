@@ -8,6 +8,7 @@ import Index from './pages/Index'
 import Login from './pages/Login'
 import LeadDetail from './pages/LeadDetail'
 import Usuarios from './pages/Usuarios'
+import Painel from './pages/Painel'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -50,6 +51,14 @@ const App = () => (
               element={
                 <Protected>
                   <Usuarios />
+                </Protected>
+              }
+            />
+            <Route
+              path="/painel"
+              element={
+                <Protected>
+                  <Painel />
                 </Protected>
               }
             />
