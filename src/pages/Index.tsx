@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { createLead, deleteLead, getLeads, Lead } from '@/services/leads'
 import { Button } from '@/components/ui/button'
@@ -40,6 +40,7 @@ const ETAPA_VARIANT: Record<string, 'secondary' | 'default' | 'outline' | 'destr
 
 export default function Index() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -220,10 +221,15 @@ export default function Index() {
               {leads.map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex items-center justify-between gap-4 rounded-lg border p-4"
+                  className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-4 transition-colors hover:border-[#10454f]/40 hover:bg-slate-100/60"
+                  onClick={() => navigate(`/leads/${lead.id}`)}
                 >
                   <div>
-                    <Link to={`/leads/${lead.id}`} className="font-medium hover:text-[#10454f]">
+                    <Link
+                      to={`/leads/${lead.id}`}
+                      className="font-medium hover:text-[#10454f]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {lead.nome_empresa}
                     </Link>
                     <p className="text-sm text-muted-foreground">
