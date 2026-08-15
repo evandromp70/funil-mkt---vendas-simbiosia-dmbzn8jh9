@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-15T19:27:07.796Z",
+  "generatedAt": "2026-08-15T20:19:06.619Z",
   "collections": [
     {
       "name": "users",
@@ -29,21 +29,29 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "role",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["admin", "vendedor"]
+          "selectValues": [
+            "admin",
+            "vendedor"
+          ]
         }
       ],
       "indexes": [
@@ -98,7 +106,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "etapa",
@@ -133,14 +144,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "segmento",
@@ -201,7 +217,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "segmento",
@@ -220,17 +239,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_listas_owner ON listas (owner)"]
+      "indexes": [
+        "CREATE INDEX idx_listas_owner ON listas (owner)"
+      ]
     },
     {
       "name": "qualificacoes",
@@ -298,7 +324,11 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["qualificado", "nao_qualificado", "revisar"]
+          "selectValues": [
+            "qualificado",
+            "nao_qualificado",
+            "revisar"
+          ]
         },
         {
           "name": "notas",
@@ -311,17 +341,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_qualificacoes_lead ON qualificacoes (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_qualificacoes_lead ON qualificacoes (lead)"
+      ]
     },
     {
       "name": "contatos",
@@ -353,14 +390,23 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["email", "linkedin", "whatsapp", "telefone", "evento"]
+          "selectValues": [
+            "email",
+            "linkedin",
+            "whatsapp",
+            "telefone",
+            "evento"
+          ]
         },
         {
           "name": "direcao",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "mensagem",
@@ -385,17 +431,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_contatos_lead ON contatos (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_contatos_lead ON contatos (lead)"
+      ]
     },
     {
       "name": "cadencias",
@@ -433,14 +486,25 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["email", "linkedin", "whatsapp", "telefone"]
+          "selectValues": [
+            "email",
+            "linkedin",
+            "whatsapp",
+            "telefone"
+          ]
         },
         {
           "name": "status",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["agendado", "enviado", "respondido", "ignorado", "cancelado"]
+          "selectValues": [
+            "agendado",
+            "enviado",
+            "respondido",
+            "ignorado",
+            "cancelado"
+          ]
         },
         {
           "name": "rascunho_ia",
@@ -459,17 +523,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_cadencias_lead ON cadencias (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_cadencias_lead ON cadencias (lead)"
+      ]
     },
     {
       "name": "alinhamentos",
@@ -525,17 +596,96 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_alinhamentos_lead ON alinhamentos (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_alinhamentos_lead ON alinhamentos (lead)"
+      ]
+    },
+    {
+      "name": "metas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\" || user = @request.auth.id",
+        "view": "@request.auth.role = \"admin\" || user = @request.auth.id",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "contatos",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "oportunidades",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "propostas",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "forecast",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fechados",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_metas_user ON metas (user)"
+      ]
     }
   ]
 }

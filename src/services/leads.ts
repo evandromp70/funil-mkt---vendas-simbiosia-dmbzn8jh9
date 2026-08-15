@@ -212,3 +212,48 @@ export const atribuirLote = (leadIds: string[], vendedorId: string) =>
       body: JSON.stringify({ leadIds, vendedorId }),
     },
   )
+
+// ---- Metas individuais ----
+
+export type Metas = {
+  id?: string
+  user: string
+  contatos?: number
+  oportunidades?: number
+  propostas?: number
+  forecast?: number
+  fechados?: number
+}
+
+export const getMetas = () => pb.collection('metas').getFullList<Metas>({ sort: 'user' })
+
+export const saveMeta = (user: string, data: Omit<Metas, 'user'>) => {
+  // tenta achar uma meta existente para o usuário; se existir, atualiza; senão cria
+  return pb
+    .collection('metas')
+    .getFullList<Metas>({ filter: pb.filter('user = {:user}', { user }) })
+    .then((existentes) => {
+      if (existentes.length > 0) {
+        return pb.collection('metas').update<Metas>(existentes[0].id as string, data)
+      }
+      return pb.collection('metas').create<Metas>({ user, ...data })
+    })
+}
+
+// Mapeia o progresso de um dono para as 5 métricas de meta, com base nos leads dele.
+// Contatos  = leads em etapa contato ou além (começaram a ser contatados)
+// Oportunidades = leads em alinhamento ou além (qualificados)
+// Propostas = leads em conversao (proposta enviada)
+// Forecast  = leads em conversao + ganho (cenário de receita)
+// Fechados  = leads em ganho
+export function progressoMetas(leadsDoDono: Lead[]): Record<string, number> {
+  const etapas = leadsDoDono.map((l) => l.etapa)
+  const n = (conds: string[]) => etapas.filter((e) => conds.includes(e)).length
+  return {
+    contatos: n(['contato', 'cadencia', 'alinhamento', 'conversao', 'ganho', 'perdido']),
+    oportunidades: n(['alinhamento', 'conversao', 'ganho']),
+    propostas: n(['conversao', 'ganho']),
+    forecast: n(['conversao', 'ganho']),
+    fechados: n(['ganho']),
+  }
+}
