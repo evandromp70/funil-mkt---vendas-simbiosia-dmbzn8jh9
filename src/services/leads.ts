@@ -119,15 +119,15 @@ export const updateLead = (id: string, data: Partial<Lead>) =>
 export const deleteLead = (id: string) => pb.collection('leads').delete(id)
 
 export const getQualificacoes = (leadId: string) =>
-  pb
-    .collection('qualificacoes')
-    .getFullList<Qualificacao>({
-      filter: pb.filter('lead = {:leadId}', { leadId }),
-      sort: '-created',
-    })
+  pb.collection('qualificacoes').getFullList<Qualificacao>({
+    filter: pb.filter('lead = {:leadId}', { leadId }),
+    sort: '-created',
+  })
+
+const currentUserId = () => (pb.authStore.record?.id as string) ?? ''
 
 export const createQualificacao = (data: Partial<Qualificacao> & { lead: string }) =>
-  pb.collection('qualificacoes').create<Qualificacao>(data)
+  pb.collection('qualificacoes').create<Qualificacao>({ owner: currentUserId(), ...data })
 
 export const getContatos = (leadId: string) =>
   pb
@@ -135,7 +135,7 @@ export const getContatos = (leadId: string) =>
     .getFullList<Contato>({ filter: pb.filter('lead = {:leadId}', { leadId }), sort: '-created' })
 
 export const createContato = (data: Partial<Contato> & { lead: string }) =>
-  pb.collection('contatos').create<Contato>(data)
+  pb.collection('contatos').create<Contato>({ owner: currentUserId(), ...data })
 
 export const getCadencias = (leadId: string) =>
   pb
@@ -143,18 +143,16 @@ export const getCadencias = (leadId: string) =>
     .getFullList<Cadencia>({ filter: pb.filter('lead = {:leadId}', { leadId }), sort: 'toque' })
 
 export const createCadencia = (data: Partial<Cadencia> & { lead: string }) =>
-  pb.collection('cadencias').create<Cadencia>(data)
+  pb.collection('cadencias').create<Cadencia>({ owner: currentUserId(), ...data })
 
 export const getAlinhamentos = (leadId: string) =>
-  pb
-    .collection('alinhamentos')
-    .getFullList<Alinhamento>({
-      filter: pb.filter('lead = {:leadId}', { leadId }),
-      sort: '-created',
-    })
+  pb.collection('alinhamentos').getFullList<Alinhamento>({
+    filter: pb.filter('lead = {:leadId}', { leadId }),
+    sort: '-created',
+  })
 
 export const createAlinhamento = (data: Partial<Alinhamento> & { lead: string }) =>
-  pb.collection('alinhamentos').create<Alinhamento>(data)
+  pb.collection('alinhamentos').create<Alinhamento>({ owner: currentUserId(), ...data })
 
 // ---- Apoio de IA (etapas HA) — chamam as rotas custom do backend ----
 
