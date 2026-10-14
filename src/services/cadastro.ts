@@ -110,6 +110,27 @@ export const getConflitos = async (): Promise<ConflitoCadastro[]> => {
   return pb.collection('conflitos_cadastro').getFullList<ConflitoCadastro>({ sort: '-created' })
 }
 
+// ---- COORTE-PESSOA (task f5668cd8): origens e bloqueios por pessoa ----
+export const getOrigensPessoa = async (pessoaId: string) =>
+  pb.collection('pessoas_origens').getFullList({
+    filter: pb.filter('pessoa = {:p}', { p: pessoaId }),
+  })
+
+export const getBloqueiosPessoa = async (pessoaId: string) =>
+  pb.collection('bloqueios_contato').getFullList({
+    filter: pb.filter('pessoa = {:p}', { p: pessoaId }),
+  })
+
+// pedido de saída: bloqueio global — impede todos os canais, inclusive reimportação
+export const registrarPedidoSaida = (pessoaId: string, origem = 'manual'): Promise<unknown> =>
+  pb.collection('bloqueios_contato').create({
+    pessoa: pessoaId,
+    motivo: 'pedido_saida',
+    alcance: 'global',
+    origem,
+    ambiente: 'teste',
+  })
+
 export const resolverConflito = (id: string, status: 'distintos' | 'fundidos'): Promise<unknown> =>
   pb.collection('conflitos_cadastro').update(id, { status })
 

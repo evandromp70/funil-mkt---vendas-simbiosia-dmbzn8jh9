@@ -11,8 +11,14 @@ import {
   normalizarLinkedin,
   getConflitos,
   resolverConflito,
+  getOrigensPessoa,
+  getBloqueiosPessoa,
+  registrarPedidoSaida,
+  elegibilidadeFria,
+  type BloqueioPessoa,
   type ConflitoCadastro,
   type Empresa,
+  type OrigemPessoa,
   type Pessoa,
 } from '@/services/cadastro'
 import { Button } from '@/components/ui/button'
@@ -25,6 +31,8 @@ export default function Cadastro() {
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
   const [conflitos, setConflitos] = useState<ConflitoCadastro[]>([])
+  const [origensPorPessoa, setOrigensPorPessoa] = useState<Record<string, OrigemPessoa[]>>({})
+  const [bloqueiosPorPessoa, setBloqueiosPorPessoa] = useState<Record<string, BloqueioPessoa[]>>({})
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
 
@@ -53,6 +61,22 @@ export default function Cadastro() {
       setEmpresas(es)
       setPessoas(ps)
       await carregarConflitos()
+      // origens e bloqueios por pessoa (para o status de fria)
+      const origs: Record<string, OrigemPessoa[]> = {}
+      const bls: Record<string, BloqueioPessoa[]> = {}
+      await Promise.all(
+        ps.map(async (p) => {
+          try {
+            origs[p.id] = await getOrigensPessoa(p.id)
+            bls[p.id] = await getBloqueiosPessoa(p.id)
+          } catch (_) {
+            origs[p.id] = []
+            bls[p.id] = []
+          }
+        }),
+      )
+      setOrigensPorPessoa(origs)
+      setBloqueiosPorPessoa(bls)
     } catch (e) {
       setErro('Não foi possível carregar o cadastro: ' + String(e))
     }
@@ -238,18 +262,52 @@ export default function Cadastro() {
           </Card>
 
           <div className="mt-4 space-y-2">
-            {pessoas.map((p) => (
-              <Card key={p.id}>
-                <CardContent className="py-3">
-                  <p className="font-medium">{p.nome}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.email_norm || 'sem e-mail'}
-                    {p.telefone_norm ? ' · ' + p.telefone_norm : ''}
-                    {p.relacionamento_conhecido ? ' · conhecido' : ''}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+            {pessoas.map((p) => {
+              const eleg = elegibilidadeFria(
+                p,
+                origensPorPessoa[p.id] ?? [],
+                bloqueiosPorPessoa[p.id] ?? [],
+              )
+              const rotulo =
+                eleg.status === 'excluida'
+                  ? 'Protegida (conhecida)'
+                  : eleg.status === 'bloqueada'
+                    ? eleg.motivo === 'pedido_saida'
+                      ? 'Bloqueada (pedido de saída)'
+                      : 'Bloqueada (relacionamento)'
+                    : 'Elegível para lista fria'
+              return (
+                <Card key={p.id}>
+                  <CardContent className="py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{p.nome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {p.email_norm || 'sem e-mail'}
+                          {p.telefone_norm ? ' · ' + p.telefone_norm : ''}
+                          {p.relacionamento_conhecido ? ' · conhecido' : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{rotulo}</span>
+                        {eleg.status !== 'bloqueada' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              await registrarPedidoSaida(p.id)
+                              await carregar()
+                            }}
+                          >
+                            Registrar pedido de saída
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
             {pessoas.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma pessoa cadastrada.</p>
             )}
