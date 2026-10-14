@@ -6,7 +6,7 @@
 - url_preview: https://funil-mkt-vendas-simbiosia-aa6fd--preview.goskip.app
 - versao_aplicada: 47d5170 (v0.0.22, conferida em 14/10/2026)
 - versao_publicada: 47d5170 em 2026-10-14T18:41:52Z
-- ultima_task: 20c86bd2 (aguardando novo teste humano)
+- ultima_task: 20c86bd2 (concluída — teste humano aprovado em 15/10/2026)
 - espelho: `codigo/` guarda a última versão de cada arquivo alterado pelas tasks. É cópia de
   consulta; a fonte executável é o Skip. Nunca edite o espelho para mudar o sistema.
 
