@@ -22,14 +22,14 @@ migrate(
             values: ['teste', 'producao'],
             maxSelect: 1,
           },
-          { name: 'pausa_geral', type: 'bool', required: true },
-          { name: 'envio_real_habilitado', type: 'bool', required: true },
+          // sem required: o PocketBase rejeita false/0 como "blank" em campos required
+          { name: 'pausa_geral', type: 'bool' },
+          { name: 'envio_real_habilitado', type: 'bool' },
           {
             name: 'integracoes_externas_habilitadas',
             type: 'bool',
-            required: true,
           },
-          { name: 'fase_validada', type: 'number', required: true, onlyInt: true, min: 0 },
+          { name: 'fase_validada', type: 'number', onlyInt: true, min: 0 },
           { name: 'timezone', type: 'text', required: true },
           { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
           { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
