@@ -1,4 +1,5 @@
 // Analisa a qualificação de um lead (etapa HA — humano revisa antes de decidir).
+// v0.0.22: recarga do hook com o portão de ambiente de teste (SPEC-1-001).
 routerAdd(
   'POST',
   '/backend/v1/funil/analisar-qualificacao',
