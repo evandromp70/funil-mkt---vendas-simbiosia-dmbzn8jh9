@@ -1,10 +1,9 @@
 // SPEC-1-002 (task 3b736d7d): identidade de pessoas — CA-1-002-02.
-// v0.0.38: recarga do hook (hooks em execução ficam desatualizados — lição da 490ec843).
-// Na criação de pessoas: se um identificador individual confirmado (e-mail individual,
-// telefone, LinkedIn) já pertence a OUTRA pessoa, registra conflito na fila e nega a criação
-// (400) — sem fundir e sem expor dados. Duplicata exata do mesmo par pessoa+identificador é
-// negada pelo índice único; o serviço resolve reuso antes de criar.
-onRecordCreate('pessoas', (e) => {
+// v0.0.39: correção CRÍTICA — record hook sem e.next() engole a escrita (guia §3.3).
+// Toda via termina em e.next() ou throw. A coleção é passada como argumento.
+// Regra: identificador individual confirmado (e-mail individual, telefone, LinkedIn) que já
+// pertence a OUTRA pessoa → registra conflito na fila e NEGAR a criação (sem fundir, sem expor).
+onRecordCreate((e) => {
   const novo = e.record
   const ambiente = novo.getString('ambiente') || 'teste'
 
@@ -30,36 +29,38 @@ onRecordCreate('pessoas', (e) => {
       continue
     }
 
+    let outras = []
     try {
       const existentes = $app.findRecordsByFilter('pessoas', campo + ' = {:v}', '', 2, 0, {
         v: valor,
       })
-      // outra pessoa (id diferente) já tem este identificador confirmado → conflito
-      const outras = existentes.filter((p) => p.id !== novo.id)
-      if (outras.length > 0) {
-        try {
-          const col = $app.findCollectionByNameOrId('conflitos_cadastro')
-          const reg = new Record(col)
-          reg.set('entidade', 'pessoas')
-          reg.set('identificador_tipo', campo.replace('_norm', ''))
-          reg.set('identificador_norm', valor)
-          reg.set('ids_envolvidos', JSON.stringify([novo.id].concat(outras.map((p) => p.id))))
-          reg.set(
-            'detalhe',
-            'Identificador confirmado pertence a mais de uma pessoa; revisão do admin (sem fusão automática).',
-          )
-          reg.set('status', 'pendente')
-          reg.set('ambiente', ambiente)
-          $app.save(reg)
-        } catch (errReg) {
-          $app.logger().warn('falha ao registrar conflito de identidade', 'err', String(errReg))
-        }
-        // nega a criação sem expor dados da outra pessoa
-        return e.error(
-          400,
-          'Identificador já confirmado para outra pessoa — conflito registrado para revisão.',
+      outras = existentes.filter((p) => p.id !== novo.id)
+    } catch (_) {
+      continue
+    }
+    if (outras.length > 0) {
+      try {
+        const col = $app.findCollectionByNameOrId('conflitos_cadastro')
+        const reg = new Record(col)
+        reg.set('entidade', 'pessoas')
+        reg.set('identificador_tipo', campo.replace('_norm', ''))
+        reg.set('identificador_norm', valor)
+        reg.set('ids_envolvidos', JSON.stringify([novo.id].concat(outras.map((p) => p.id))))
+        reg.set(
+          'detalhe',
+          'Identificador confirmado pertence a mais de uma pessoa; revisão do admin (sem fusão automática).',
         )
+        reg.set('status', 'pendente')
+        reg.set('ambiente', ambiente)
+        $app.save(reg)
+      } catch (errReg) {
+        $app.logger().warn('falha ao registrar conflito de identidade', 'err', String(errReg))
       }
-    } catch (_) {}
+      throw new BadRequestError(
+        'Identificador já confirmado para outra pessoa — conflito registrado para revisão.',
+      )
+    }
   }
-})
+
+  return e.next()
+}, 'pessoas')
