@@ -113,6 +113,39 @@ export const getConflitos = async (): Promise<ConflitoCadastro[]> => {
 export const resolverConflito = (id: string, status: 'distintos' | 'fundidos'): Promise<unknown> =>
   pb.collection('conflitos_cadastro').update(id, { status })
 
+// ---- COORTE-PESSOA (task f5668cd8): elegibilidade da lista fria ----
+// Função pura: dado o núcleo da pessoa, suas origens e seus bloqueios, decide o status na fria.
+// Regras da SPEC-1-002: conhecido em QUALQUER origem fica fora da fria (regra 4); pedido de
+// saída bloqueia global e persiste após reimportação (regra 6); mesma empresa NÃO protege
+// (regra 5 — aprovação é da pessoa, não da empresa).
+export type OrigemPessoa = {
+  coorte: 'rede_jose' | 'rede_evandro' | 'clientes_atendidos' | 'inbound' | 'fria'
+}
+export type BloqueioPessoa = {
+  motivo: 'relacionamento' | 'pedido_saida'
+  alcance: 'fria' | 'global'
+}
+
+export const elegibilidadeFria = (
+  pessoa: { relacionamento_conhecido?: boolean; empresa?: string },
+  origens: OrigemPessoa[],
+  bloqueios: BloqueioPessoa[],
+): { status: 'elegivel' | 'excluida' | 'bloqueada'; motivo?: string } => {
+  // 1. pedido de saída (global) vence tudo — persiste independentemente de reimportação
+  const saida = bloqueios.find((b) => b.motivo === 'pedido_saida')
+  if (saida) return { status: 'bloqueada', motivo: 'pedido_saida' }
+
+  // 2. bloqueio de relacionamento (alcance fria) também impede a fria
+  const rel = bloqueios.find((b) => b.motivo === 'relacionamento')
+  if (rel) return { status: 'bloqueada', motivo: 'relacionamento' }
+
+  // 3. conhecido em qualquer origem → fora da fria
+  if (pessoa.relacionamento_conhecido) return { status: 'excluida', motivo: 'relacionamento' }
+
+  // 4. sem bloqueio e sem relacionamento → elegível (mesmo compartilhando empresa com conhecido)
+  return { status: 'elegivel' }
+}
+
 export const resolverIdentidade = (
   novo: {
     nome?: string
