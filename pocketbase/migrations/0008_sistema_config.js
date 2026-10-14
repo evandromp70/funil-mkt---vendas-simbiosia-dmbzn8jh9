@@ -1,10 +1,10 @@
-// SPEC-1-001 (task 20c86bd2): coleções de controle do ambiente de demonstração.
-// Migração ADITIVA: cria sistema_config (registro único) e teste_despachos (observador de
-// tentativas de despacho externo em backend TESTE). Não altera coleções nem campos legados.
+// SPEC-1-001 (task 20c86bd2): coleção de controle do ambiente de demonstração.
+// Migração ADITIVA: cria sistema_config (registro único). Não altera coleções nem campos legados.
+// Correção da v0.0.19: um único migrate() por arquivo (o arquivo anterior com dois blocos foi
+// rejeitado pelo runtime e a migração não aplicou — por isso o selo TESTE não aparecia).
 
 migrate(
   (app) => {
-    // ---------- sistema_config (registro único) ----------
     if (!app.hasTable('sistema_config')) {
       const collection = new Collection({
         name: 'sistema_config',
@@ -52,47 +52,6 @@ migrate(
   (app) => {
     try {
       app.delete(app.findCollectionByNameOrId('sistema_config'))
-    } catch (_) {}
-  },
-)
-
-migrate(
-  (app) => {
-    // ---------- teste_despachos (observador de tentativas — só backend TESTE) ----------
-    if (!app.hasTable('teste_despachos')) {
-      const collection = new Collection({
-        name: 'teste_despachos',
-        type: 'base',
-        // escrita NUNCA pela API: só hooks (regras de escrita nulas = superuser/hook)
-        listRule: "@request.auth.id != '' && @request.auth.role = 'admin'",
-        viewRule: "@request.auth.id != '' && @request.auth.role = 'admin'",
-        createRule: null,
-        updateRule: null,
-        deleteRule: null,
-        fields: [
-          { name: 'correlation_id', type: 'text', required: true },
-          { name: 'rota', type: 'text', required: true },
-          {
-            name: 'tipo',
-            type: 'select',
-            required: true,
-            values: ['ai', 'http', 'canal'],
-            maxSelect: 1,
-          },
-          { name: 'tentativas', type: 'number', required: true, onlyInt: true, min: 0 },
-          { name: 'created', type: 'autodate', onCreate: true, onUpdate: false },
-          { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true },
-        ],
-        indexes: [
-          'CREATE INDEX idx_teste_despachos_correlation ON teste_despachos (correlation_id)',
-        ],
-      })
-      app.save(collection)
-    }
-  },
-  (app) => {
-    try {
-      app.delete(app.findCollectionByNameOrId('teste_despachos'))
     } catch (_) {}
   },
 )
