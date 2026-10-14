@@ -528,7 +528,7 @@ export default function LeadDetail() {
                 rows={3}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 gap-y-1">
               <Button
                 variant="secondary"
                 onClick={handleAnalisarQualificacao}
@@ -627,7 +627,7 @@ export default function LeadDetail() {
                 rows={2}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 gap-y-1">
               <Button
                 variant="secondary"
                 onClick={handleGerarContato}
@@ -743,7 +743,7 @@ export default function LeadDetail() {
                 rows={3}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 gap-y-1">
               <Button
                 variant="secondary"
                 onClick={handleSugerirToque}
