@@ -36,7 +36,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { getSistemaConfig, recursoHabilitado } from '@/services/sistema'
-import { getSistemaConfig, recursoHabilitado } from '@/services/sistema'
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>()
