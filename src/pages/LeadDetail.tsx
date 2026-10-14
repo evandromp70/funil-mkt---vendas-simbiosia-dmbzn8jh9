@@ -535,8 +535,13 @@ export default function LeadDetail() {
                 disabled={!iaHabilitada || aiLoading === 'qualificacao'}
                 title={iaHabilitada ? undefined : 'Recurso desabilitado no ambiente de teste'}
               >
-                {aiLoading === 'qualificacao' ? 'Analisando...' : '🤖 Analisar com IA'}{' '}
+                {aiLoading === 'qualificacao' ? 'Analisando...' : '🤖 Analisar com IA'}
               </Button>
+              {!iaHabilitada && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Recurso desabilitado no ambiente de teste
+                </p>
+              )}{' '}
               <Button
                 onClick={handleSalvarQualificacao}
                 className="bg-[#10454f] hover:bg-[#0d3942]"
@@ -629,8 +634,13 @@ export default function LeadDetail() {
                 disabled={!iaHabilitada || aiLoading === 'contato'}
                 title={iaHabilitada ? undefined : 'Recurso desabilitado no ambiente de teste'}
               >
-                {aiLoading === 'contato' ? 'Gerando...' : '🤖 Gerar rascunho com IA'}{' '}
+                {aiLoading === 'contato' ? 'Gerando...' : '🤖 Gerar rascunho com IA'}
               </Button>
+              {!iaHabilitada && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Recurso desabilitado no ambiente de teste
+                </p>
+              )}{' '}
               <Button onClick={handleSalvarContato} className="bg-[#10454f] hover:bg-[#0d3942]">
                 Salvar contato
               </Button>
@@ -742,6 +752,11 @@ export default function LeadDetail() {
               >
                 {aiLoading === 'toque' ? 'Sugerindo...' : '🤖 Sugerir próximo toque com IA'}{' '}
               </Button>
+              {!iaHabilitada && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Recurso desabilitado no ambiente de teste
+                </p>
+              )}{' '}
               <Button onClick={handleSalvarCadencia} className="bg-[#10454f] hover:bg-[#0d3942]">
                 Salvar toque
               </Button>
