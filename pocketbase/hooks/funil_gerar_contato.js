@@ -1,5 +1,6 @@
 // Gera rascunho de primeiro contato para um lead (etapa HA — humano revisa antes de enviar).
 // v0.0.27: recarga do hook com o portão de ambiente de teste (SPEC-1-001, task 490ec843).
+// v0.0.34: recarga para as regras ACL da migração 0010 valerem no runtime (task d3e7d6da).
 routerAdd(
   'POST',
   '/backend/v1/funil/gerar-contato',

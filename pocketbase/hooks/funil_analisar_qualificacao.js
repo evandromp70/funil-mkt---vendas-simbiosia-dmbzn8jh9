@@ -1,6 +1,7 @@
 // Analisa a qualificação de um lead (etapa HA — humano revisa antes de decidir).
 // v0.0.22: recarga do hook com o portão de ambiente de teste (SPEC-1-001).
 // v0.0.26: recarga após v0.0.25 (hooks em execução estavam desatualizados).
+// v0.0.34: recarga para as regras ACL da migração 0010 valerem no runtime (task d3e7d6da).
 routerAdd(
   'POST',
   '/backend/v1/funil/analisar-qualificacao',
