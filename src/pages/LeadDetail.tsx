@@ -538,7 +538,7 @@ export default function LeadDetail() {
                 {aiLoading === 'qualificacao' ? 'Analisando...' : '🤖 Analisar com IA'}
               </Button>
               {!iaHabilitada && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="w-full text-xs text-muted-foreground">
                   Recurso desabilitado no ambiente de teste
                 </p>
               )}{' '}
@@ -637,7 +637,7 @@ export default function LeadDetail() {
                 {aiLoading === 'contato' ? 'Gerando...' : '🤖 Gerar rascunho com IA'}
               </Button>
               {!iaHabilitada && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="w-full text-xs text-muted-foreground">
                   Recurso desabilitado no ambiente de teste
                 </p>
               )}{' '}
@@ -753,7 +753,7 @@ export default function LeadDetail() {
                 {aiLoading === 'toque' ? 'Sugerindo...' : '🤖 Sugerir próximo toque com IA'}{' '}
               </Button>
               {!iaHabilitada && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="w-full text-xs text-muted-foreground">
                   Recurso desabilitado no ambiente de teste
                 </p>
               )}{' '}
