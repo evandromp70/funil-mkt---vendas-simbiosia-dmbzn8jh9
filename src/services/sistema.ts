@@ -46,32 +46,3 @@ export const recursoHabilitado = (
       return false
   }
 }
-
-// Gate de UI para o ambiente de demonstração (SPEC-1-001, task 490ec843).
-// Função pura: dado o estado do sistema e o tipo de ação, decide se o recurso pode executar.
-// Falha fechada: sem config, ou config inválida, assume pausa — nada despacha.
-export type AcaoExterna = 'ia' | 'envio' | 'sincronizacao'
-
-export const recursoHabilitado = (
-  cfg:
-    | Pick<
-        SistemaConfig,
-        'pausa_geral' | 'envio_real_habilitado' | 'integracoes_externas_habilitadas'
-      >
-    | null
-    | undefined,
-  acao: AcaoExterna,
-): boolean => {
-  if (!cfg || typeof cfg.pausa_geral !== 'boolean') return false
-  if (cfg.pausa_geral) return false
-  switch (acao) {
-    case 'ia':
-      return true
-    case 'envio':
-      return cfg.envio_real_habilitado === true
-    case 'sincronizacao':
-      return cfg.integracoes_externas_habilitadas === true
-    default:
-      return false
-  }
-}
