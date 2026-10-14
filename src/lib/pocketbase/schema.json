@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-14T20:41:57.538Z",
+  "generatedAt": "2026-10-14T21:07:56.908Z",
   "collections": [
     {
       "name": "users",
@@ -178,6 +178,26 @@
         },
         {
           "name": "lista_origem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "empresa",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "empresas"
+        },
+        {
+          "name": "pessoa",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "pessoas"
+        },
+        {
+          "name": "migracao_origem_id",
           "type": "text",
           "required": false,
           "system": false
@@ -825,6 +845,464 @@
       "indexes": [
         "CREATE INDEX idx_teste_despachos_correlation ON teste_despachos (correlation_id)"
       ]
+    },
+    {
+      "name": "empresas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "razao_social",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "cnpj_norm",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cnae",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "setor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "porte",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "uf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_inicio",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "atributos",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste",
+            "producao"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_empresas_cnpj ON empresas (ambiente, cnpj_norm) WHERE cnpj_norm != \"\""
+      ]
+    },
+    {
+      "name": "pessoas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "email_norm",
+          "type": "email",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "telefone_norm",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "linkedin_norm",
+          "type": "url",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "relacionamento_conhecido",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "owner_relacao",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "atributos",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste",
+            "producao"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "pessoas_origens",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "pessoa",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "pessoas"
+        },
+        {
+          "name": "coorte",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "rede_jose",
+            "rede_evandro",
+            "clientes_atendidos",
+            "inbound",
+            "fria"
+          ]
+        },
+        {
+          "name": "dono_relacao",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "fonte",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "referencia",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recebido_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste",
+            "producao"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "bloqueios_contato",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "pessoa",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "pessoas"
+        },
+        {
+          "name": "identificador_norm",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "relacionamento",
+            "pedido_saida"
+          ]
+        },
+        {
+          "name": "alcance",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "fria",
+            "global"
+          ]
+        },
+        {
+          "name": "origem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste",
+            "producao"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "fusoes_cadastro",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "entidade_origem",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "id_origem",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "entidade_destino",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "id_destino",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "snapshot_antes",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "vinculos_antes",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ator",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "motivo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "aplicada",
+            "revertida",
+            "revisao_pendente"
+          ]
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste",
+            "producao"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": []
     }
   ]
 }
