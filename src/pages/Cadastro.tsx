@@ -9,6 +9,9 @@ import {
   normalizarEmail,
   normalizarTelefone,
   normalizarLinkedin,
+  getConflitos,
+  resolverConflito,
+  type ConflitoCadastro,
   type Empresa,
   type Pessoa,
 } from '@/services/cadastro'
@@ -21,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 export default function Cadastro() {
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
+  const [conflitos, setConflitos] = useState<ConflitoCadastro[]>([])
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
 
@@ -35,11 +39,20 @@ export default function Cadastro() {
   const [telefone, setTelefone] = useState('')
   const [linkedin, setLinkedin] = useState('')
 
+  const carregarConflitos = async () => {
+    try {
+      setConflitos(await getConflitos())
+    } catch (e) {
+      setErro('Não foi possível carregar conflitos: ' + String(e))
+    }
+  }
+
   const carregar = async () => {
     try {
       const [es, ps] = await Promise.all([getEmpresas(), getPessoas()])
       setEmpresas(es)
       setPessoas(ps)
+      await carregarConflitos()
     } catch (e) {
       setErro('Não foi possível carregar o cadastro: ' + String(e))
     }
@@ -113,6 +126,9 @@ export default function Cadastro() {
         <TabsList>
           <TabsTrigger value="empresas">Empresas ({empresas.length})</TabsTrigger>
           <TabsTrigger value="pessoas">Pessoas ({pessoas.length})</TabsTrigger>
+          <TabsTrigger value="conflitos">
+            Conflitos ({conflitos.filter((c) => c.status === 'pendente').length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="empresas">
@@ -238,6 +254,48 @@ export default function Cadastro() {
               <p className="text-sm text-muted-foreground">Nenhuma pessoa cadastrada.</p>
             )}
           </div>
+        </TabsContent>
+        <TabsContent value="conflitos">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Fila de conflitos de identidade</CardTitle>
+              <CardDescription>
+                Um mesmo identificador individual (e-mail/telefone/LinkedIn) apareceu em mais de uma
+                pessoa. Nada foi fundido — decida caso a caso. "Pessoas distintas" mantém os dois
+                cadastros; a fusão em si vem na task de fusão reversível.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {conflitos.map((c) => (
+                <div key={c.id} className="rounded border p-3">
+                  <p className="text-sm font-medium">
+                    {c.identificador_tipo}: {c.identificador_norm}{' '}
+                    {c.status !== 'pendente' && (
+                      <span className="ml-1 text-xs text-muted-foreground">({c.status})</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{c.detalhe}</p>
+                  {c.status === 'pendente' && (
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          await resolverConflito(c.id, 'distintos')
+                          await carregarConflitos()
+                        }}
+                      >
+                        Marcar pessoas distintas
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {conflitos.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhum conflito registrado.</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -94,6 +94,25 @@ export const eEmailGenerico = (email: string | undefined | null): boolean => {
   return GENERICA.test(e)
 }
 
+// fila de conflitos (leitura/decisão do admin — a fusão em si é a task FUSAO-REVERSIVEL)
+export type ConflitoCadastro = {
+  id: string
+  entidade: 'pessoas' | 'empresas'
+  identificador_tipo: 'email' | 'telefone' | 'linkedin'
+  identificador_norm: string
+  ids_envolvidos?: string
+  detalhe?: string
+  status: 'pendente' | 'distintos' | 'fundidos'
+  created?: string
+}
+
+export const getConflitos = async (): Promise<ConflitoCadastro[]> => {
+  return pb.collection('conflitos_cadastro').getFullList<ConflitoCadastro>({ sort: '-created' })
+}
+
+export const resolverConflito = (id: string, status: 'distintos' | 'fundidos'): Promise<unknown> =>
+  pb.collection('conflitos_cadastro').update(id, { status })
+
 export const resolverIdentidade = (
   novo: {
     nome?: string
