@@ -1,4 +1,5 @@
 // Gera rascunho de primeiro contato para um lead (etapa HA — humano revisa antes de enviar).
+// v0.0.27: recarga do hook com o portão de ambiente de teste (SPEC-1-001, task 490ec843).
 routerAdd(
   'POST',
   '/backend/v1/funil/gerar-contato',
