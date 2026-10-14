@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// SPEC-1-001 (tasks 20c86bd2 + 490ec843): transpila os serviços de regras (TypeScript) para o
-// runner. Usa ts.transpileModule (typescript já no repositório — sem dependência nova). O cliente
-// do PocketBase vira stub: o runner testa funções puras; tipos e build reais ficam no QA do Skip.
+// SPEC-1-001 (tasks 20c86bd2 + 490ec843) e SPEC-1-002 (3b736d7d): transpila os serviços de
+// regras (TypeScript) para o runner. Usa ts.transpileModule (typescript já no repositório —
+// sem dependência nova). O cliente do PocketBase vira stub: o runner testa funções puras;
+// tipos e build reais ficam no QA do Skip.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -21,7 +22,7 @@ fs.writeFileSync(
   "const pb = new Proxy({}, { get: () => () => { throw new Error('pb indisponível no runner de regras') } })\nexport default pb\n",
 )
 
-const ARQUIVOS = ['src/services/leads.ts', 'src/services/sistema.ts']
+const ARQUIVOS = ['src/services/leads.ts', 'src/services/sistema.ts', 'src/services/cadastro.ts']
 for (const rel of ARQUIVOS) {
   const fonte = path.join(root, rel)
   const saida = ts.transpileModule(fs.readFileSync(fonte, 'utf8'), {

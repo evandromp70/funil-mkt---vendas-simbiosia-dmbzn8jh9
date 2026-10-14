@@ -1,4 +1,5 @@
 // SPEC-1-002 (task 3b736d7d): identidade de pessoas — CA-1-002-02.
+// v0.0.38: recarga do hook (hooks em execução ficam desatualizados — lição da 490ec843).
 // Na criação de pessoas: se um identificador individual confirmado (e-mail individual,
 // telefone, LinkedIn) já pertence a OUTRA pessoa, registra conflito na fila e nega a criação
 // (400) — sem fundir e sem expor dados. Duplicata exata do mesmo par pessoa+identificador é
