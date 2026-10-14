@@ -46,3 +46,25 @@ test('AMBIENTE-RESTORE (erro): entrada inválida não passa em silêncio', () =>
   assert.throws(() => progressoMetas(null))
   assert.throws(() => progressoMetas(undefined))
 })
+
+// ---- SEM-EXTERNO (task 490ec843): gate de UI por função pura ----
+const { recursoHabilitado } = await import('file://' + transpiled.replace('leads.mjs', 'sistema.mjs'))
+
+test('SEM-EXTERNO (regra): recursoHabilitado bloqueia ações de IA com pausa ativa', () => {
+ const cfg = { ambiente: 'teste', pausa_geral: true, envio_real_habilitado: false, integracoes_externas_habilitadas: false }
+ assert.equal(recursoHabilitado(cfg, 'ia'), false)
+ assert.equal(recursoHabilitado(cfg, 'envio'), false)
+ assert.equal(recursoHabilitado(cfg, 'sincronizacao'), false)
+})
+
+test('SEM-EXTERNO (borda): config ausente/inválida assume pausa (falha fechada)', () => {
+ assert.equal(recursoHabilitado(null, 'ia'), false)
+ assert.equal(recursoHabilitado(undefined, 'ia'), false)
+ assert.equal(recursoHabilitado({}, 'ia'), false)
+})
+
+test('SEM-EXTERNO (controle): com pausa desligada e integrações habilitadas, recurso abre', () => {
+ const cfg = { ambiente: 'teste', pausa_geral: false, envio_real_habilitado: true, integracoes_externas_habilitadas: true }
+ assert.equal(recursoHabilitado(cfg, 'ia'), true)
+ assert.equal(recursoHabilitado(cfg, 'envio'), true)
+})

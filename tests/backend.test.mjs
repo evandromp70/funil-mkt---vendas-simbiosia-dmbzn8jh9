@@ -97,8 +97,59 @@ test('SEM-EXTERNO (controle positivo interceptado): tentativa deliberada registr
   }
 })
 
-test('AMBIENTE-RESTORE: backup restaura as mesmas contagens (manifesto)', async (t) => {
-  if (SEM_AMBIENTE) {
+test('SEM-EXTERNO: alteração de flags do sistema_config é negada a não-admin', async (t) => {
+ if (SEM_AMBIENTE) {
+   t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
+   return
+ }
+ const pb = await novoPb()
+ const cfg = (await pb.collection('sistema_config').getList(1, 1)).items[0]
+ // vendedor não-admin tenta ligar as integrações externas — tem de ser negado
+ const vendedor = new PocketBase(TEST_BACKEND_URL)
+ await vendedor.collection('users').authWithPassword(
+   process.env.TEST_VENDEDOR_EMAIL || 'vendedor@simbiosia.com.br',
+   process.env.TEST_VENDEDOR_PASSWORD || 'Vendedor@2026',
+ )
+ await assert.rejects(
+   vendedor.collection('sistema_config').update(cfg.id, { integracoes_externas_habilitadas: true }),
+   (err) => err.status === 403 || err.status === 404,
+   'não-admin não pode alterar flags do sistema',
+ )
+ // estado persistido conferido: flag continua desligada
+ const depois = await pb.collection('sistema_config').getOne(cfg.id)
+ assert.equal(depois.integracoes_externas_habilitadas, false)
+})
+
+test('SEM-EXTERNO: contador por correlação nas 3 rotas (admin autorizado, pausa ativa)', async (t) => {
+ if (SEM_AMBIENTE) {
+   t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
+   return
+ }
+ const pb = await novoPb()
+ const lead = await pb.collection('leads').create({
+   owner: pb.authStore.record.id,
+   nome_empresa: 'TESTE Fornecedor Zero ' + Date.now(),
+   origem: 'outbound',
+   etapa: 'lista',
+ })
+ try {
+   for (const rota of ['gerar-contato', 'sugerir-toque', 'analisar-qualificacao']) {
+     const resp = await pb.send(`/backend/v1/funil/${rota}`, {
+       method: 'POST',
+       body: JSON.stringify({ leadId: lead.id }),
+     })
+     assert.equal(resp.interceptado, true, `rota ${rota} deveria responder interceptada`)
+   }
+   const despachos = await pb.collection('teste_despachos').getFullList({
+     filter: pb.filter("created > {:quando}", { quando: new Date(Date.now() - 60000).toISOString().replace('T', ' ') }),
+   })
+   assert.equal(despachos.length, 0, 'contador deve permanecer 0 com o portão ativo')
+ } finally {
+   await pb.collection('leads').delete(lead.id)
+ }
+})
+
+test('AMBIENTE-RESTORE: backup restaura as mesmas contagens (manifesto)', async (t) => {  if (SEM_AMBIENTE) {
     t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
     return
   }

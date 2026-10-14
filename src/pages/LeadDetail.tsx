@@ -35,6 +35,8 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { getSistemaConfig, recursoHabilitado } from '@/services/sistema'
+import { getSistemaConfig, recursoHabilitado } from '@/services/sistema'
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>()
@@ -49,7 +51,8 @@ export default function LeadDetail() {
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
   const [aiLoading, setAiLoading] = useState('')
-
+  // SPEC-1-001 (task 490ec843): gate de UI — botões de IA desabilitados em ambiente de teste
+  const [iaHabilitada, setIaHabilitada] = useState(false)
   // campos de edição
   const [obs, setObs] = useState('')
 
@@ -116,6 +119,13 @@ export default function LeadDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  // SPEC-1-001 (task 490ec843): gate de UI — carrega a config e desabilita os botões de IA
+  // quando o ambiente está em pausa (falha fechada: sem config, os botões ficam desabilitados).
+  useEffect(() => {
+    getSistemaConfig()
+      .then((cfg) => setIaHabilitada(recursoHabilitado(cfg, 'ia')))
+      .catch(() => setIaHabilitada(false))
+  }, [])
   if (loading) return <p className="text-muted-foreground">Carregando...</p>
   if (!lead) return <p className="text-red-600">Lead não encontrado.</p>
 
@@ -523,9 +533,10 @@ export default function LeadDetail() {
               <Button
                 variant="secondary"
                 onClick={handleAnalisarQualificacao}
-                disabled={aiLoading === 'qualificacao'}
+                disabled={!iaHabilitada || aiLoading === 'qualificacao'}
+                title={iaHabilitada ? undefined : 'Recurso desabilitado no ambiente de teste'}
               >
-                {aiLoading === 'qualificacao' ? 'Analisando...' : '🤖 Analisar com IA'}
+                {aiLoading === 'qualificacao' ? 'Analisando...' : '🤖 Analisar com IA'}{' '}
               </Button>
               <Button
                 onClick={handleSalvarQualificacao}
@@ -616,9 +627,10 @@ export default function LeadDetail() {
               <Button
                 variant="secondary"
                 onClick={handleGerarContato}
-                disabled={aiLoading === 'contato'}
+                disabled={!iaHabilitada || aiLoading === 'contato'}
+                title={iaHabilitada ? undefined : 'Recurso desabilitado no ambiente de teste'}
               >
-                {aiLoading === 'contato' ? 'Gerando...' : '🤖 Gerar rascunho com IA'}
+                {aiLoading === 'contato' ? 'Gerando...' : '🤖 Gerar rascunho com IA'}{' '}
               </Button>
               <Button onClick={handleSalvarContato} className="bg-[#10454f] hover:bg-[#0d3942]">
                 Salvar contato
@@ -726,9 +738,10 @@ export default function LeadDetail() {
               <Button
                 variant="secondary"
                 onClick={handleSugerirToque}
-                disabled={aiLoading === 'toque'}
+                disabled={!iaHabilitada || aiLoading === 'toque'}
+                title={iaHabilitada ? undefined : 'Recurso desabilitado no ambiente de teste'}
               >
-                {aiLoading === 'toque' ? 'Sugerindo...' : '🤖 Sugerir próximo toque com IA'}
+                {aiLoading === 'toque' ? 'Sugerindo...' : '🤖 Sugerir próximo toque com IA'}{' '}
               </Button>
               <Button onClick={handleSalvarCadencia} className="bg-[#10454f] hover:bg-[#0d3942]">
                 Salvar toque
