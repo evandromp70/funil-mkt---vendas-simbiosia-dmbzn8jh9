@@ -18,24 +18,17 @@ migrate(
     app.save(leads)
 
     // ---------- filhas: dono do lead pai ----------
-    // vendedor lê/grava filhos só se for o dono do lead pai; admin passa.
-    const regraFilha = {
-      list: '@request.auth.id != "" && (@request.auth.role = "admin" || lead.owner = @request.auth.id)',
-      view: '@request.auth.id != "" && (@request.auth.role = "admin" || lead.owner = @request.auth.id)',
-      create:
-        '@request.auth.id != "" && (@request.auth.role = "admin" || @request.body.lead.owner = @request.auth.id)',
-      update:
-        '@request.auth.id != "" && (@request.auth.role = "admin" || lead.owner = @request.auth.id)',
-      delete:
-        '@request.auth.id != "" && (@request.auth.role = "admin" || lead.owner = @request.auth.id)',
-    }
+    const regraFilhaLista =
+      '@request.auth.id != "" && (@request.auth.role = "admin" || lead.owner = @request.auth.id)'
+    const regraFilhaCriar =
+      '@request.auth.id != "" && (@request.auth.role = "admin" || @request.body.lead.owner = @request.auth.id)'
     for (const nome of ['qualificacoes', 'contatos', 'cadencias', 'alinhamentos']) {
       const col = app.findCollectionByNameOrId(nome)
-      col.listRule = regraFilha.list
-      col.viewRule = regraFilha.view
-      col.createRule = regraFilha.create
-      col.updateRule = regraFilha.update
-      col.deleteRule = regraFilha.delete
+      col.listRule = regraFilhaLista
+      col.viewRule = regraFilhaLista
+      col.createRule = regraFilhaCriar
+      col.updateRule = regraFilhaLista
+      col.deleteRule = regraFilhaLista
       app.save(col)
     }
 
