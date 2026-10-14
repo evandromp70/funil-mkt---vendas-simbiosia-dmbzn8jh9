@@ -9,6 +9,7 @@ import Login from './pages/Login'
 import LeadDetail from './pages/LeadDetail'
 import Usuarios from './pages/Usuarios'
 import Painel from './pages/Painel'
+import Cadastro from './pages/Cadastro'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -59,6 +60,14 @@ const App = () => (
               element={
                 <Protected>
                   <Painel />
+                </Protected>
+              }
+            />
+            <Route
+              path="/cadastro"
+              element={
+                <Protected>
+                  <Cadastro />
                 </Protected>
               }
             />

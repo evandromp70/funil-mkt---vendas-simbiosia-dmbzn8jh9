@@ -28,6 +28,9 @@ export default function Layout() {
                 <Link to="/painel" className="hover:text-[#10454f]">
                   Painel
                 </Link>
+                <Link to="/cadastro" className="hover:text-[#10454f]">
+                  Cadastro
+                </Link>
                 <Link to="/usuarios" className="hover:text-[#10454f]">
                   Usuários
                 </Link>
