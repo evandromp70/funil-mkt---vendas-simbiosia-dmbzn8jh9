@@ -14,7 +14,7 @@ migrate(
     const leads = app.findCollectionByNameOrId('leads')
     leads.updateRule =
       '@request.auth.id != "" && (@request.auth.role = "admin" || ' +
-      '(owner = @request.auth.id && @request.body.owner:unchanged))'
+      '(owner = @request.auth.id && @request.body.owner = owner))'
     app.save(leads)
 
     // ---------- filhas: dono do lead pai ----------

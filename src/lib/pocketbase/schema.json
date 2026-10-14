@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-14T18:35:56.222Z",
+  "generatedAt": "2026-10-14T20:35:40.590Z",
   "collections": [
     {
       "name": "users",
@@ -8,7 +8,7 @@
         "list": "@request.auth.role = \"admin\" || id = @request.auth.id",
         "view": "@request.auth.role = \"admin\" || id = @request.auth.id",
         "create": "@request.auth.role = \"admin\"",
-        "update": "@request.auth.role = \"admin\" || id = @request.auth.id",
+        "update": "@request.auth.role = \"admin\" || (id = @request.auth.id && @request.body.role:changed = false && @request.body.verified:changed = false)",
         "delete": "@request.auth.role = \"admin\" && id != @request.auth.id"
       },
       "fields": [
@@ -29,21 +29,29 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "role",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["admin", "vendedor"]
+          "selectValues": [
+            "admin",
+            "vendedor"
+          ]
         }
       ],
       "indexes": [
@@ -58,7 +66,7 @@
         "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
         "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
         "create": "@request.auth.id != \"\" && owner = @request.auth.id",
-        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || (owner = @request.auth.id && @request.body.owner = owner))",
         "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)"
       },
       "fields": [
@@ -98,7 +106,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "etapa",
@@ -133,14 +144,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "segmento",
@@ -201,7 +217,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "segmento",
@@ -220,27 +239,34 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_listas_owner ON listas (owner)"]
+      "indexes": [
+        "CREATE INDEX idx_listas_owner ON listas (owner)"
+      ]
     },
     {
       "name": "qualificacoes",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "create": "@request.auth.id != \"\" && owner = @request.auth.id",
-        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.body.lead.owner = @request.auth.id)",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)"
       },
       "fields": [
         {
@@ -298,7 +324,11 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["qualificado", "nao_qualificado", "revisar"]
+          "selectValues": [
+            "qualificado",
+            "nao_qualificado",
+            "revisar"
+          ]
         },
         {
           "name": "notas",
@@ -311,27 +341,34 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_qualificacoes_lead ON qualificacoes (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_qualificacoes_lead ON qualificacoes (lead)"
+      ]
     },
     {
       "name": "contatos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "create": "@request.auth.id != \"\" && owner = @request.auth.id",
-        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.body.lead.owner = @request.auth.id)",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)"
       },
       "fields": [
         {
@@ -353,14 +390,23 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["email", "linkedin", "whatsapp", "telefone", "evento"]
+          "selectValues": [
+            "email",
+            "linkedin",
+            "whatsapp",
+            "telefone",
+            "evento"
+          ]
         },
         {
           "name": "direcao",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["inbound", "outbound"]
+          "selectValues": [
+            "inbound",
+            "outbound"
+          ]
         },
         {
           "name": "mensagem",
@@ -385,27 +431,34 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_contatos_lead ON contatos (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_contatos_lead ON contatos (lead)"
+      ]
     },
     {
       "name": "cadencias",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "create": "@request.auth.id != \"\" && owner = @request.auth.id",
-        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.body.lead.owner = @request.auth.id)",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)"
       },
       "fields": [
         {
@@ -433,14 +486,25 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["email", "linkedin", "whatsapp", "telefone"]
+          "selectValues": [
+            "email",
+            "linkedin",
+            "whatsapp",
+            "telefone"
+          ]
         },
         {
           "name": "status",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["agendado", "enviado", "respondido", "ignorado", "cancelado"]
+          "selectValues": [
+            "agendado",
+            "enviado",
+            "respondido",
+            "ignorado",
+            "cancelado"
+          ]
         },
         {
           "name": "rascunho_ia",
@@ -459,27 +523,34 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_cadencias_lead ON cadencias (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_cadencias_lead ON cadencias (lead)"
+      ]
     },
     {
       "name": "alinhamentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "create": "@request.auth.id != \"\" && owner = @request.auth.id",
-        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)",
-        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || owner = @request.auth.id)"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.body.lead.owner = @request.auth.id)",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || lead.owner = @request.auth.id)"
       },
       "fields": [
         {
@@ -525,17 +596,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_alinhamentos_lead ON alinhamentos (lead)"]
+      "indexes": [
+        "CREATE INDEX idx_alinhamentos_lead ON alinhamentos (lead)"
+      ]
     },
     {
       "name": "metas",
@@ -590,17 +668,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_metas_user ON metas (user)"]
+      "indexes": [
+        "CREATE INDEX idx_metas_user ON metas (user)"
+      ]
     },
     {
       "name": "sistema_config",
@@ -618,7 +703,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["teste", "producao"]
+          "selectValues": [
+            "teste",
+            "producao"
+          ]
         },
         {
           "name": "pausa_geral",
@@ -655,17 +743,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_sistema_config_ambiente ON sistema_config (ambiente)"]
+      "indexes": [
+        "CREATE INDEX idx_sistema_config_ambiente ON sistema_config (ambiente)"
+      ]
     },
     {
       "name": "teste_despachos",
@@ -695,7 +790,11 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["ai", "http", "canal"]
+          "selectValues": [
+            "ai",
+            "http",
+            "canal"
+          ]
         },
         {
           "name": "tentativas",
@@ -708,14 +807,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": [
