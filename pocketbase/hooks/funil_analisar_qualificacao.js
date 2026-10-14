@@ -20,6 +20,12 @@ routerAdd(
       return e.unauthorizedError('Autenticação necessária')
     }
 
+    // SPEC-1-001 (task d3e7d6da): ACL — só admin ou o dono do lead pai; recusa ANTES de
+    // qualquer processamento, sem expor dados do lead (404, não 403).
+    if (e.auth.role !== 'admin' && lead.getString('owner') !== e.auth.id) {
+      return e.notFoundError('Lead não encontrado')
+    }
+
     const prompt =
       'Analise a qualificação do lead abaixo e devolva: (1) notas de 0 a 10 para fit, dor, orçamento, timing e acesso; (2) score total de 0 a 100; (3) pontos fortes; (4) lacunas que impedem a qualificação. Seja específico e acionável, em português:\n' +
       'Empresa: ' +

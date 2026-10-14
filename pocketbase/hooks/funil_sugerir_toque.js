@@ -19,6 +19,12 @@ routerAdd(
       return e.unauthorizedError('Autenticação necessária')
     }
 
+    // SPEC-1-001 (task d3e7d6da): ACL — só admin ou o dono do lead pai; recusa ANTES de
+    // qualquer processamento, sem expor dados do lead (404, não 403).
+    if (e.auth.role !== 'admin' && lead.getString('owner') !== e.auth.id) {
+      return e.notFoundError('Lead não encontrado')
+    }
+
     // Histórico de cadência do lead
     let historico = ''
     try {
