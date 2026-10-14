@@ -35,6 +35,56 @@ routerAdd(
       'Observações: ' +
       (lead.getString('observacoes') || 'sem observações')
 
+    // SPEC-1-001 (task 20c86bd2): despachos instrumentados e neutralizados em backend TESTE.
+    // Portão primeiro: com pausa geral ativa, a chamada NÃO chega ao despacho (contador por
+    // correlação permanece 0). Controle positivo: body.provar_interceptacao (só em pausa).
+    let cfgPausa = true
+    let cfgExterno = false
+    try {
+      const cfgs = $app.findRecordsByFilter('sistema_config', '', '', 1, 0)
+      if (cfgs.length > 0) {
+        cfgPausa = cfgs[0].getBool('pausa_geral')
+        cfgExterno = cfgs[0].getBool('integracoes_externas_habilitadas')
+      }
+    } catch (_) {}
+
+    if (cfgPausa && body.provar_interceptacao !== true) {
+      return e.json(200, {
+        analise:
+          '[AMBIENTE DE TESTE] Análise interceptada (SPEC-1-001): nenhuma chamada externa foi executada durante a construção.',
+        interceptado: true,
+      })
+    }
+
+    const correlationId = 'disp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+    try {
+      const col = $app.findCollectionByNameOrId('teste_despachos')
+      const reg = new Record(col)
+      reg.set('correlation_id', correlationId)
+      reg.set('rota', '/backend/v1/funil/analisar-qualificacao')
+      reg.set('tipo', 'ai')
+      reg.set('tentativas', 1)
+      $app.save(reg)
+    } catch (errReg) {
+      $app.logger().warn('falha ao registrar despacho interceptado', 'err', String(errReg))
+    }
+
+    if (cfgPausa) {
+      return e.json(200, {
+        analise:
+          '[AMBIENTE DE TESTE] Controle positivo: tentativa de despacho registrada (correlação ' +
+          correlationId +
+          ') sem rede. Nenhuma chamada externa foi executada.',
+        interceptado: true,
+        correlation_id: correlationId,
+      })
+    }
+
+    if (!cfgExterno) {
+      return e.internalServerError('Integrações externas desabilitadas (SPEC-1-001)')
+    }
+
+    // Caminho original — só executa com pausa desligada e integrações externas habilitadas
     let result
     try {
       result = $ai.agent('assistente-funil').chat({

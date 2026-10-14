@@ -11,7 +11,7 @@ import {
   Usuario,
   ETAPA_LABEL,
 } from '@/services/leads'
-import { Button } from '@/components/ui/button'
+import { getSistemaConfig } from '@/services/sistema'import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -55,7 +55,14 @@ export default function Index() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [saving, setSaving] = useState(false)
+ // SPEC-1-001 (task 20c86bd2): selo do ambiente de teste
+ const [ambiente, setAmbiente] = useState<'teste' | 'producao' | null>(null)
 
+ useEffect(() => {
+   getSistemaConfig()
+     .then((cfg) => setAmbiente(cfg?.ambiente ?? null))
+     .catch(() => setAmbiente(null))
+ }, [])
   const [nomeEmpresa, setNomeEmpresa] = useState('')
   const [contatoNome, setContatoNome] = useState('')
   const [contatoEmail, setContatoEmail] = useState('')
@@ -268,8 +275,12 @@ export default function Index() {
           Acompanhe a jornada dos leads: lista → qualificação → contato → cadência → alinhamento →
           conversão.
         </p>
+       {ambiente === 'teste' && (
+         <Badge variant="outline" aria-label="Ambiente de teste" className="mt-2">
+           AMBIENTE DE TESTE
+         </Badge>
+       )}
       </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Novo lead</CardTitle>
