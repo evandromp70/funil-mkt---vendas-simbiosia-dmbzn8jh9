@@ -17,6 +17,8 @@ import {
   type Degrau,
   type TipoAtendimento,
 } from '@/services/produtos'
+import { ROTEIRO, avaliarEntrevista } from '@/services/entrevista'
+import pb from '@/lib/pocketbase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -60,6 +62,68 @@ export default function Produtos() {
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
   const [processando, setProcessando] = useState(false)
+  const [entrevistaProdutoId, setEntrevistaProdutoId] = useState('')
+  const [respostas, setRespostas] = useState<Record<string, string>>({})
+  const [entrevistaId, setEntrevistaId] = useState('')
+  const [entrevistaStatus, setEntrevistaStatus] = useState('')
+
+  const abrirEntrevista = async (p: Produto) => {
+    setEntrevistaProdutoId(p.id)
+    setErro('')
+    setAviso('')
+    try {
+      const existentes = await pb.collection('entrevista_produtos').getFullList({
+        filter: pb.filter('produto = {:p}', { p: p.id }),
+      })
+      if (existentes.length > 0) {
+        setEntrevistaId(existentes[0].id)
+        setEntrevistaStatus(existentes[0].status)
+        setRespostas(JSON.parse(existentes[0].respostas || '{}'))
+      } else {
+        setEntrevistaId('')
+        setEntrevistaStatus('')
+        setRespostas({})
+      }
+    } catch (e) {
+      setErro('Falha ao carregar a entrevista: ' + String((e as Error).message ?? e))
+    }
+  }
+
+  const salvarEntrevista = async (confirmar: boolean) => {
+    if (!entrevistaProdutoId) return
+    setErro('')
+    setAviso('')
+    setProcessando(true)
+    try {
+      const avaliacao = avaliarEntrevista(respostas)
+      const corpo: Record<string, unknown> = {
+        produto: entrevistaProdutoId,
+        roteiro: JSON.stringify(ROTEIRO),
+        respostas: JSON.stringify(respostas),
+        pendencias: JSON.stringify(avaliacao.pendencias),
+        status: confirmar ? 'confirmada' : 'rascunho',
+        ambiente: 'teste',
+        owner: pb.authStore.record?.id,
+      }
+      if (entrevistaId) {
+        await pb.collection('entrevista_produtos').update(entrevistaId, corpo)
+      } else {
+        const criada = await pb.collection('entrevista_produtos').create(corpo)
+        setEntrevistaId(criada.id)
+        setEntrevistaStatus(criada.status)
+      }
+      setEntrevistaStatus(confirmar ? 'confirmada' : 'rascunho')
+      setAviso(
+        confirmar
+          ? 'Entrevista confirmada e registrada — o produto e a régua continuam inativos até a aprovação.'
+          : 'Respostas salvas como rascunho, com as pendências registradas.',
+      )
+    } catch (e) {
+      setErro('Falha na entrevista: ' + String((e as Error).message ?? e))
+    } finally {
+      setProcessando(false)
+    }
+  }
 
   const carregar = async () => {
     try {
@@ -262,6 +326,67 @@ export default function Produtos() {
         </CardContent>
       </Card>
 
+      {entrevistaProdutoId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Entrevista do produto {produtos.find((p) => p.id === entrevistaProdutoId)?.nome ?? ''}
+              {entrevistaStatus === 'confirmada' && (
+                <Badge className="ml-2 bg-green-100 text-green-800">Confirmada</Badge>
+              )}
+              {entrevistaStatus === 'rascunho' && (
+                <Badge variant="secondary" className="ml-2">
+                  Rascunho
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Roteiro da entrevista conduzida com o Maestro. Respostas parciais são salvas com
+              pendências; a confirmação exige todas as respostas e NÃO ativa o produto nem a régua
+              (aprovação vem na etapa seguinte).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {ROTEIRO.map((pergunta) => (
+              <div key={pergunta.chave} className="space-y-1">
+                <Label>{pergunta.pergunta}</Label>
+                <Input
+                  value={respostas[pergunta.chave] ?? ''}
+                  onChange={(e) => setRespostas({ ...respostas, [pergunta.chave]: e.target.value })}
+                />
+              </div>
+            ))}
+            {(() => {
+              const avaliacao = avaliarEntrevista(respostas)
+              return (
+                <>
+                  {!avaliacao.completa && (
+                    <p className="text-xs text-amber-700">
+                      Pendências: {avaliacao.pendencias.length} pergunta(s) sem resposta.
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={processando}
+                      onClick={() => void salvarEntrevista(false)}
+                    >
+                      Salvar rascunho
+                    </Button>
+                    <Button
+                      disabled={processando || !avaliacao.completa}
+                      onClick={() => void salvarEntrevista(true)}
+                    >
+                      Confirmar entrevista
+                    </Button>
+                  </div>
+                </>
+              )
+            })()}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Catálogo ({produtos.length})</CardTitle>
@@ -309,6 +434,9 @@ export default function Produtos() {
                       <div className="flex gap-1">
                         <Button variant="outline" size="sm" onClick={() => editar(p)}>
                           Editar
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => void abrirEntrevista(p)}>
+                          Entrevista
                         </Button>
                         <Button
                           variant="ghost"
