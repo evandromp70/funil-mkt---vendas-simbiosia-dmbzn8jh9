@@ -502,20 +502,13 @@ export default function Produtos() {
                     </p>
                   )}
                   <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void abrirEntrevista(p)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => void abrirEntrevista(p)}>
                       Entrevista
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void abrirRegua(p)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => void abrirRegua(p)}>
                       Régua
-                    </Button>                    <Button
+                    </Button>{' '}
+                    <Button
                       disabled={processando || !avaliacao.completa}
                       onClick={() => void salvarEntrevista(true)}
                     >
@@ -533,14 +526,13 @@ export default function Produtos() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Régua do produto{' '}
-              {produtos.find((p) => p.id === reguaProdutoId)?.nome ?? ''}
+              Régua do produto {produtos.find((p) => p.id === reguaProdutoId)?.nome ?? ''}
             </CardTitle>
             <CardDescription>
               Critérios (termo simples ou grupo E/OU com peso no termo), eliminatórias e faixas
               A/B/C/D. Editar uma versão aprovada cria um rascunho novo — a anterior permanece
-              íntegra. Aprovar exige validação verde e registra autor/data. Sem código —
-              critérios são dados estruturados.
+              íntegra. Aprovar exige validação verde e registra autor/data. Sem código — critérios
+              são dados estruturados.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -575,7 +567,10 @@ export default function Produtos() {
                 </div>
               </div>
               {reguaCriterios.map((c, i) => (
-                <div key={c.id} className="grid grid-cols-1 gap-2 rounded-md border p-2 sm:grid-cols-6">
+                <div
+                  key={c.id}
+                  className="grid grid-cols-1 gap-2 rounded-md border p-2 sm:grid-cols-6"
+                >
                   <div className="sm:col-span-1">
                     <Label className="text-xs">Tipo</Label>
                     <Input value={c.tipo === 'grupo' ? 'Grupo E/OU' : 'Termo'} disabled />
@@ -600,7 +595,9 @@ export default function Produtos() {
                       <div className="sm:col-span-3">
                         <Label className="text-xs">Filhos (campo:operador:valor; ...)</Label>
                         <Input
-                          value={(c as Grupo).filhos.map((f) => `${f.campo}:${f.operador}:${JSON.stringify(f.valor)}`).join('; ')}
+                          value={(c as Grupo).filhos
+                            .map((f) => `${f.campo}:${f.operador}:${JSON.stringify(f.valor)}`)
+                            .join('; ')}
                           onChange={(e) => {
                             const filhos = e.target.value
                               .split(';')
@@ -614,11 +611,15 @@ export default function Produtos() {
                                 } catch (_) {
                                   // valor textual sem JSON — fica como string
                                 }
-                                return { campo: (campo ?? '').trim(), operador: (operador ?? 'eq').trim(), valor }
+                                return {
+                                  campo: (campo ?? '').trim(),
+                                  operador: (operador ?? 'eq').trim(),
+                                  valor,
+                                }
                               })
                             atualizarCriterio(i, 'filhos', filhos)
                           }}
-                          placeholder="porte:gte:50; segmento:in:["industria"]"
+                          placeholder={'porte:gte:50; segmento:in:["industria"]'}
                         />
                       </div>
                     </>
@@ -721,7 +722,12 @@ export default function Produtos() {
                 variant="outline"
                 disabled={processando}
                 onClick={() => {
-                  const e = validarRegua({ metodo: reguaMetodo, criterios: reguaCriterios, regras_eliminatorias: reguaEliminatorias, faixas: reguaFaixas })
+                  const e = validarRegua({
+                    metodo: reguaMetodo,
+                    criterios: reguaCriterios,
+                    regras_eliminatorias: reguaEliminatorias,
+                    faixas: reguaFaixas,
+                  })
                   setErrosRegua(e)
                   if (Object.keys(e).length === 0) void salvarRegua(false)
                 }}
@@ -731,7 +737,12 @@ export default function Produtos() {
               <Button
                 disabled={processando}
                 onClick={() => {
-                  const e = validarRegua({ metodo: reguaMetodo, criterios: reguaCriterios, regras_eliminatorias: reguaEliminatorias, faixas: reguaFaixas })
+                  const e = validarRegua({
+                    metodo: reguaMetodo,
+                    criterios: reguaCriterios,
+                    regras_eliminatorias: reguaEliminatorias,
+                    faixas: reguaFaixas,
+                  })
                   setErrosRegua(e)
                   if (Object.keys(e).length === 0) void salvarRegua(true)
                 }}
