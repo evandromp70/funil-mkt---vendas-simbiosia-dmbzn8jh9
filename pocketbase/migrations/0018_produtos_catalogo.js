@@ -15,7 +15,7 @@ migrate(
         viewRule: regraLeitura,
         createRule: regraAdmin,
         updateRule: regraAdmin,
-        deleteRule: null,
+        deleteRule: regraAdmin,
         fields: [
           { name: 'nome', type: 'text', required: true },
           {
