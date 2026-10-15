@@ -140,28 +140,41 @@ export default function Produtos() {
     }
     setProcessando(true)
     try {
+      // Régua nova SEMPRE nasce rascunho (contrato do backend); aprovar é um update
+      // explícito em seguida — é o que registra autor/data da aprovação no histórico.
       const corpo: Record<string, unknown> = {
         produto: reguaProdutoId,
         metodo: reguaMetodo,
         criterios: JSON.stringify(reguaCriterios),
         regras_eliminatorias: JSON.stringify(reguaEliminatorias),
         faixas: JSON.stringify(reguaFaixas),
-        status: aprovar ? 'aprovada' : 'rascunho',
+        status: 'rascunho',
         ambiente: 'teste',
         owner: pb.authStore.record?.id,
+      }
+      const aprovarCriada = async (id: string) => {
+        if (aprovar) await pb.collection('regras_produto').update(id, { status: 'aprovada' })
       }
       if (reguaEditandoId) {
         const atual = reguaVersoes.find((v) => v.id === reguaEditandoId)
         if (atual && atual.status === 'aprovada') {
           // editar aprovada cria rascunho novo (v+1) — a anterior permanece íntegra
-          await pb.collection('regras_produto').create(corpo)
-          setAviso('Rascunho novo criado — a versão aprovada anterior permanece íntegra.')
+          const criada = await pb.collection('regras_produto').create(corpo)
+          await aprovarCriada(criada.id)
+          setAviso(
+            aprovar
+              ? 'Régua aprovada e registrada (hash no histórico).'
+              : 'Rascunho novo criado — a versão aprovada anterior permanece íntegra.',
+          )
         } else {
-          await pb.collection('regras_produto').update(reguaEditandoId, corpo)
+          await pb
+            .collection('regras_produto')
+            .update(reguaEditandoId, aprovar ? { ...corpo, status: 'aprovada' } : corpo)
           setAviso(aprovar ? 'Régua aprovada e registrada (hash no histórico).' : 'Rascunho salvo.')
         }
       } else {
-        await pb.collection('regras_produto').create(corpo)
+        const criada = await pb.collection('regras_produto').create(corpo)
+        await aprovarCriada(criada.id)
         setAviso(aprovar ? 'Régua aprovada e registrada (hash no histórico).' : 'Rascunho salvo.')
       }
       await abrirRegua(produtos.find((p) => p.id === reguaProdutoId)!)
