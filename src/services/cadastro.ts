@@ -25,6 +25,7 @@ export type Pessoa = {
   linkedin_norm?: string
   relacionamento_conhecido?: boolean
   owner_relacao?: string
+  fundida_em?: string
   ambiente: 'teste' | 'producao'
   created?: string
   updated?: string

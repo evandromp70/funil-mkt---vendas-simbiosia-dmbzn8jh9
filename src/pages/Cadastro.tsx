@@ -297,7 +297,14 @@ export default function Cadastro() {
                   <CardContent className="py-3">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <p className="font-medium">{p.nome}</p>
+                        <p className="font-medium">
+                          {p.nome}
+                          {p.fundida_em && (
+                            <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">
+                              Fundida — ver aba Fusões
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {p.email_norm || 'sem e-mail'}
                           {p.telefone_norm ? ' · ' + p.telefone_norm : ''}
