@@ -28,6 +28,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -379,22 +386,38 @@ export default function Cadastro() {
             <CardContent className="space-y-2">
               <div className="flex gap-2 items-end">
                 <div className="space-y-1">
-                  <Label>Pessoa origem (ID)</Label>
-                  <Input
-                    value={fusaoOrigem}
-                    onChange={(e) => setFusaoOrigem(e.target.value)}
-                    placeholder="ID da duplicata"
-                    className="w-56"
-                  />
+                  <Label>Pessoa origem (duplicata)</Label>
+                  <Select value={fusaoOrigem} onValueChange={setFusaoOrigem}>
+                    <SelectTrigger className="w-56">
+                      <SelectValue placeholder="Escolha a duplicata" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pessoas
+                        .filter((p) => !p.fundida_em)
+                        .map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nome} {p.email_norm ? `(${p.email_norm})` : '(sem e-mail)'}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label>Pessoa destino (ID)</Label>
-                  <Input
-                    value={fusaoDestino}
-                    onChange={(e) => setFusaoDestino(e.target.value)}
-                    placeholder="ID que fica"
-                    className="w-56"
-                  />
+                  <Label>Pessoa destino (a que fica)</Label>
+                  <Select value={fusaoDestino} onValueChange={setFusaoDestino}>
+                    <SelectTrigger className="w-56">
+                      <SelectValue placeholder="Escolha a que fica" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pessoas
+                        .filter((p) => !p.fundida_em && p.id !== fusaoOrigem)
+                        .map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nome} {p.email_norm ? `(${p.email_norm})` : '(sem e-mail)'}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button
                   onClick={async () => {

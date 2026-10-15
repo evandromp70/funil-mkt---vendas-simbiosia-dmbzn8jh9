@@ -132,6 +132,8 @@ export const registrarPedidoSaida = (pessoaId: string, origem = 'manual'): Promi
   })
 
 // ---- FUSAO-REVERSIVEL (task 1b7f6fc7): fundir duplicata e reverter ----
+// v0.0.46: fusão por SELEÇÃO de pessoa (não por ID cru) — o admin escolhe pelo nome.
+export type PessoaOpcao = Pick<Pessoa, 'id' | 'nome' | 'email_norm'>
 export type FusaoCadastro = {
   id: string
   entidade_origem: string
