@@ -131,6 +131,28 @@ export const registrarPedidoSaida = (pessoaId: string, origem = 'manual'): Promi
     ambiente: 'teste',
   })
 
+// ---- FUSAO-REVERSIVEL (task 1b7f6fc7): fundir duplicata e reverter ----
+export type FusaoCadastro = {
+  id: string
+  entidade_origem: string
+  id_origem: string
+  entidade_destino: string
+  id_destino: string
+  motivo?: string
+  status: 'aplicada' | 'revertida' | 'revisao_pendente'
+  created?: string
+}
+
+export const getFusoes = async (): Promise<FusaoCadastro[]> => {
+  return pb.collection('fusoes_cadastro').getFullList<FusaoCadastro>({ sort: '-created' })
+}
+
+export const fundirPessoas = (idOrigem: string, idDestino: string, motivo?: string) =>
+  pb.send('/backend/v1/cadastro/fundir', { method: 'POST', body: { idOrigem, idDestino, motivo } })
+
+export const reverterFusao = (fusaoId: string) =>
+  pb.send('/backend/v1/cadastro/reverter-fusao', { method: 'POST', body: { fusaoId } })
+
 export const resolverConflito = (id: string, status: 'distintos' | 'fundidos'): Promise<unknown> =>
   pb.collection('conflitos_cadastro').update(id, { status })
 

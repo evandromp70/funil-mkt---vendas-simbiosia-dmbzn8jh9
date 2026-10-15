@@ -15,9 +15,13 @@ import {
   getBloqueiosPessoa,
   registrarPedidoSaida,
   elegibilidadeFria,
+  getFusoes,
+  fundirPessoas,
+  reverterFusao,
   type BloqueioPessoa,
   type ConflitoCadastro,
   type Empresa,
+  type FusaoCadastro,
   type OrigemPessoa,
   type Pessoa,
 } from '@/services/cadastro'
@@ -31,7 +35,10 @@ export default function Cadastro() {
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [pessoas, setPessoas] = useState<Pessoa[]>([])
   const [conflitos, setConflitos] = useState<ConflitoCadastro[]>([])
+  const [fusoes, setFusoes] = useState<FusaoCadastro[]>([])
   const [origensPorPessoa, setOrigensPorPessoa] = useState<Record<string, OrigemPessoa[]>>({})
+  const [fusaoOrigem, setFusaoOrigem] = useState('')
+  const [fusaoDestino, setFusaoDestino] = useState('')
   const [bloqueiosPorPessoa, setBloqueiosPorPessoa] = useState<Record<string, BloqueioPessoa[]>>({})
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
@@ -50,6 +57,7 @@ export default function Cadastro() {
   const carregarConflitos = async () => {
     try {
       setConflitos(await getConflitos())
+      setFusoes(await getFusoes())
     } catch (e) {
       setErro('Não foi possível carregar conflitos: ' + String(e))
     }
@@ -153,6 +161,7 @@ export default function Cadastro() {
           <TabsTrigger value="conflitos">
             Conflitos ({conflitos.filter((c) => c.status === 'pendente').length})
           </TabsTrigger>
+          <TabsTrigger value="fusoes">Fusões ({fusoes.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="empresas">
@@ -351,6 +360,90 @@ export default function Cadastro() {
               ))}
               {conflitos.length === 0 && (
                 <p className="text-sm text-muted-foreground">Nenhum conflito registrado.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="fusoes">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Fusões de cadastro (auditadas e reversíveis)
+              </CardTitle>
+              <CardDescription>
+                Fundir move os vínculos (leads, origens, bloqueios) para a pessoa destino e marca a
+                origem como fundida — nada é apagado. A reversão restaura os vínculos; se houver
+                alteração posterior, exige revisão em vez de sobrescrever.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex gap-2 items-end">
+                <div className="space-y-1">
+                  <Label>Pessoa origem (ID)</Label>
+                  <Input
+                    value={fusaoOrigem}
+                    onChange={(e) => setFusaoOrigem(e.target.value)}
+                    placeholder="ID da duplicata"
+                    className="w-56"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Pessoa destino (ID)</Label>
+                  <Input
+                    value={fusaoDestino}
+                    onChange={(e) => setFusaoDestino(e.target.value)}
+                    placeholder="ID que fica"
+                    className="w-56"
+                  />
+                </div>
+                <Button
+                  onClick={async () => {
+                    setErro('')
+                    try {
+                      await fundirPessoas(fusaoOrigem.trim(), fusaoDestino.trim())
+                      setFusaoOrigem('')
+                      setFusaoDestino('')
+                      setAviso('Fusão aplicada.')
+                      await carregar()
+                    } catch (e2) {
+                      setErro('Erro ao fundir: ' + String(e2))
+                    }
+                  }}
+                >
+                  Fundir
+                </Button>
+              </div>
+              {fusoes.map((f) => (
+                <div key={f.id} className="rounded border p-3">
+                  <p className="text-sm font-medium">
+                    {f.status} · {f.entidade_origem} {f.id_origem.slice(0, 8)}… →{' '}
+                    {f.id_destino.slice(0, 8)}…
+                  </p>
+                  <p className="text-xs text-muted-foreground">{f.motivo}</p>
+                  {f.status === 'aplicada' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      onClick={async () => {
+                        setErro('')
+                        try {
+                          await reverterFusao(f.id)
+                          setAviso('Fusão revertida.')
+                          await carregar()
+                        } catch (e2) {
+                          setErro('Reversão com revisão: ' + String(e2))
+                          await carregar()
+                        }
+                      }}
+                    >
+                      Reverter
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {fusoes.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma fusão registrada.</p>
               )}
             </CardContent>
           </Card>
