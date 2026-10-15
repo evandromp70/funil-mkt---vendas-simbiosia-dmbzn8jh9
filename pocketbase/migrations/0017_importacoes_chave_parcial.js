@@ -3,22 +3,24 @@
 // DESFEITO (o lote revertido continuava dono da chave_lote → violação de índice → 500 na
 // confirmação). Migração ADITIVA: troca o índice por um PARCIAL — só lotes vivos
 // (status != 'revertida') o ocupam. Lote revertido reprocessa como novo, como o admin espera.
+// Nota: c.indexes é array JS imutável no PocketBase v0.36 — reconstruir com filter/spread.
 migrate(
   (app) => {
     const c = app.findCollectionByNameOrId('importacoes')
-    const velho = c.indexes.find((i) => i.includes('idx_importacoes_chave'))
-    if (velho) c.indexes.remove(velho)
+    const semVelho = c.indexes.filter((i) => !i.includes('idx_importacoes_chave'))
     const novo =
       "CREATE UNIQUE INDEX idx_importacoes_chave ON importacoes (chave_lote) WHERE status != 'revertida'"
-    if (!c.indexes.includes(novo)) c.indexes.push(novo)
+    c.indexes = [...semVelho, novo]
     app.save(c)
   },
   (app) => {
     try {
       const c = app.findCollectionByNameOrId('importacoes')
-      const parcial = c.indexes.find((i) => i.includes("WHERE status != 'revertida'"))
-      if (parcial) c.indexes.remove(parcial)
-      c.indexes.push('CREATE UNIQUE INDEX idx_importacoes_chave ON importacoes (chave_lote)')
+      const semParcial = c.indexes.filter((i) => !i.includes("WHERE status != 'revertida'"))
+      c.indexes = [
+        ...semParcial,
+        'CREATE UNIQUE INDEX idx_importacoes_chave ON importacoes (chave_lote)',
+      ]
       app.save(c)
     } catch (_) {}
   },
