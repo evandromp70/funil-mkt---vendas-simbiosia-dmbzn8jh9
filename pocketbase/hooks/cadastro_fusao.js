@@ -12,7 +12,7 @@ routerAdd(
     if (!idOrigem || !idDestino) return e.badRequestError('idOrigem e idDestino são obrigatórios')
     if (idOrigem === idDestino)
       return e.badRequestError('origem e destino devem ser registros diferentes')
-    if (!e.auth || e.auth.role !== 'admin')
+    if (!e.auth || e.auth.getString('role') !== 'admin')
       return e.forbiddenError('Apenas administradores podem fundir cadastros')
 
     let origem, destino
@@ -98,7 +98,7 @@ routerAdd(
     const body = e.requestInfo().body || {}
     const fusaoId = body.fusaoId
     if (!fusaoId) return e.badRequestError('fusaoId é obrigatório')
-    if (!e.auth || e.auth.role !== 'admin')
+    if (!e.auth || e.auth.getString('role') !== 'admin')
       return e.forbiddenError('Apenas administradores podem reverter fusões')
 
     let fusao
