@@ -94,6 +94,22 @@ export default function LeadDetail() {
   const [produtosComRegua, setProdutosComRegua] = useState<Produto[]>([])
   const [pontuacoes, setPontuacoes] = useState<Record<string, Record<string, unknown>>>({})
   const [scoreLoading, setScoreLoading] = useState('')
+  // SPEC-1-005 (task 77a1aa6e): histórico das notas por produto (append-only; leitura dono/admin)
+  const [historicoPontuacoes, setHistoricoPontuacoes] = useState<
+    Array<{
+      id: string
+      produto: string
+      versao: number
+      valor: number | null
+      faixa: string
+      status: string
+      updated: string
+    }>
+  >([])
+  const historicoPorProduto = historicoPontuacoes.reduce<Record<string, unknown[]>>((acc, h) => {
+    ;(acc[h.produto] ??= []).push(h)
+    return acc
+  }, {})
 
   const calcularPontuacao = async (produtoId: string) => {
     if (!id) return
@@ -119,9 +135,34 @@ export default function LeadDetail() {
       // sem produtos ativos, a seção simplesmente não aparece
     }
   }
+  const carregarHistorico = async () => {
+    if (!id) return
+    try {
+      const lista = await pb
+        .collection('pontuacoes')
+        .getFullList({ filter: pb.filter('lead = {:l}', { l: id }), sort: '-updated' })
+      setHistoricoPontuacoes(
+        lista.map((h) => ({
+          id: h.id,
+          produto: h.produto,
+          versao: h.versao,
+          valor: h.valor,
+          faixa: h.faixa,
+          status: h.status,
+          updated: h.updated,
+        })),
+      )
+    } catch (_) {
+      // sem histórico (lead sem pontuação ainda) — seção não aparece
+    }
+  }
   useEffect(() => {
     void carregarProdutos()
   }, [])
+  useEffect(() => {
+    void carregarHistorico()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   const loadAll = async () => {
     if (!id) return
@@ -989,6 +1030,50 @@ export default function LeadDetail() {
                       </ul>
                     </div>
                   )}
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SPEC-1-005 (task 77a1aa6e): histórico das notas por produto — sem mistura */}
+      {historicoPontuacoes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Histórico das notas</CardTitle>
+            <CardDescription>
+              Todas as versões calculadas para este lead, por produto — a nota usada no contato fica
+              preservada; pontuação antiga não é sobrescrita.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Object.entries(historicoPorProduto).map(([prodId, itens]) => {
+              const prod = produtosComRegua.find((p) => p.id === prodId)
+              return (
+                <div key={prodId} className="rounded-md border p-3">
+                  <p className="text-sm font-medium">{prod?.nome ?? 'Produto'}</p>
+                  <ul className="mt-2 list-inside list-disc text-xs text-muted-foreground">
+                    {(
+                      itens as Array<{
+                        versao: number
+                        valor: number | null
+                        faixa: string
+                        status: string
+                        updated: string
+                      }>
+                    ).map((h, i) => (
+                      <li key={i}>
+                        v{h.versao} —{' '}
+                        {h.status === 'calculada'
+                          ? `${String(h.valor)} (faixa ${h.faixa})`
+                          : h.status === 'pendente'
+                            ? 'Pendente'
+                            : 'Eliminado'}{' '}
+                        · {new Date(h.updated).toLocaleString('pt-BR')}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )
             })}
