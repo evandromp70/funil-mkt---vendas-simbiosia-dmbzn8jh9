@@ -1,11 +1,19 @@
-// SPEC-1-003 (task c7240db4): prévia da base antes de importar — CA-1-003-01/04.
-// Escolhe o arquivo → prévia (separador, mapeamento, linhas) → confirmação.
-// NENHUMA escrita antes da confirmação. Malformado/excedente é recusado na prévia.
-// Fórmulas neutralizadas; nenhuma API externa.
+// SPEC-1-003 (task 0574671d): importação em lote com relatório por linha — CA-1-003-02.
+// Fluxo: arquivo → prévia (c7240db4) → confirmação (lista/coorte/dono/ambiente) → relatório.
+// Repetir o mesmo lote devolve o relatório existente (sem duplicar) — sinalizado na tela.
+// Nenhuma escrita antes da confirmação; fórmulas neutralizadas; sem API externa.
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { parseCsv, detectarSeparador, neutralizarFormula, type CsvResultado } from '@/services/csv'
+import {
+  confirmarImportacao,
+  hashArquivo,
+  getListas,
+  getUsuarios,
+  type RelatorioImportacao,
+} from '@/services/importacoes'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -30,6 +38,13 @@ const CAMPOS_MAPEAVEIS = [
   'ignorar',
 ]
 
+const CORES_STATUS: Record<string, string> = {
+  nova: 'text-green-700',
+  repetida: 'text-blue-700',
+  incompleta: 'text-amber-700',
+  erro: 'text-red-700',
+}
+
 export default function Importar() {
   const [resultado, setResultado] = useState<CsvResultado | null>(null)
   const [nomeArquivo, setNomeArquivo] = useState('')
@@ -37,12 +52,21 @@ export default function Importar() {
   const [mapeamento, setMapeamento] = useState<Record<number, string>>({})
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
+  const [processando, setProcessando] = useState(false)
+  const [relatorio, setRelatorio] = useState<RelatorioImportacao | null>(null)
+  const [listaId, setListaId] = useState('') // opcional
+  const [coorte, setCoorte] = useState('fria')
+  const [donoId, setDonoId] = useState('')
+  const [ambiente, setAmbiente] = useState('teste')
+  const [listas, setListas] = useState<Array<{ id: string; nome: string }>>([])
+  const [usuarios, setUsuarios] = useState<Array<{ id: string; nome: string }>>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
   const carregarArquivo = async (arquivo: File) => {
     setErro('')
     setAviso('')
     setResultado(null)
+    setRelatorio(null)
     setMapeamento({})
     if (arquivo.size > LIMITE_BYTES) {
       setErro('Arquivo excede o limite de 5 MB (demonstração).')
@@ -66,14 +90,68 @@ export default function Importar() {
         else mapa[i] = 'ignorar'
       })
       setMapeamento(mapa)
+      // contexto da confirmação: listas e usuários
+      try {
+        const [ls, us] = await Promise.all([getListas(), getUsuarios()])
+        setListas(ls.map((l) => ({ id: l.id, nome: (l as { nome: string }).nome })))
+        setUsuarios(
+          us.map((u) => ({
+            id: u.id,
+            nome:
+              (u as { name?: string; email?: string }).name ||
+              (u as { email?: string }).email ||
+              u.id,
+          })),
+        )
+        const eu = us.find((u) => u.id === (inputRef.current?.dataset?.uid ?? ''))
+        if (eu) setDonoId(eu.id)
+      } catch (_) {}
     }
     setResultado(r)
+  }
+
+  const confirmar = async () => {
+    if (!resultado || !resultado.ok || !inputRef.current?.files?.[0]) return
+    setErro('')
+    setProcessando(true)
+    try {
+      const arquivo = inputRef.current.files[0]
+      const texto = await arquivo.text()
+      const hash = await hashArquivo(texto)
+      const linhas = resultado.linhas.map((celulas) => {
+        const obj: Record<string, string> = {}
+        celulas.forEach((c, i) => {
+          obj[String(i)] = c
+        })
+        return obj
+      })
+      const rel = await confirmarImportacao({
+        nome_arquivo: nomeArquivo,
+        arquivo_hash: hash,
+        mapeamento,
+        linhas,
+        lista: listaId,
+        coorte,
+        dono: donoId,
+        ambiente,
+      })
+      setRelatorio(rel)
+      setAviso(
+        rel.repetido
+          ? 'Este lote já tinha sido importado — mostrando o relatório original (nada foi duplicado).'
+          : 'Importação concluída. Importar o mesmo arquivo de novo devolve este mesmo relatório.',
+      )
+    } catch (e) {
+      setErro('Falha na confirmação: ' + String((e as Error).message ?? e))
+    } finally {
+      setProcessando(false)
+    }
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Importar base (prévia)</h1>
+        <h1 className="text-2xl font-bold">Importar base</h1>
         <Link to="/" className="text-sm text-muted-foreground hover:underline">
           ← Voltar ao funil
         </Link>
@@ -139,7 +217,7 @@ export default function Importar() {
         </Card>
       )}
 
-      {resultado && resultado.ok && (
+      {resultado && resultado.ok && !relatorio && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -208,9 +286,119 @@ export default function Importar() {
               )}
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              Prévia apenas — a importação em si (lote, relatório por linha, retomada) vem na
-              próxima task. Nenhuma escrita foi feita.
+            <div className="space-y-3 border-t pt-3">
+              <p className="text-sm font-medium">3. Confirmação do lote</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1">
+                  <Label>Coorte</Label>
+                  <Select value={coorte} onValueChange={setCoorte}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fria">Fria</SelectItem>
+                      <SelectItem value="rede_jose">Rede do José</SelectItem>
+                      <SelectItem value="rede_evandro">Rede do Evandro</SelectItem>
+                      <SelectItem value="clientes_atendidos">Clientes atendidos</SelectItem>
+                      <SelectItem value="inbound">Inbound</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Dono</Label>
+                  <Select value={donoId || undefined} onValueChange={setDonoId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {usuarios.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Lista (opcional)</Label>
+                  <Select value={listaId || undefined} onValueChange={setListaId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Nenhuma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                      {listas.map((l) => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Ambiente</Label>
+                  <Select value={ambiente} onValueChange={setAmbiente}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="teste">Teste</SelectItem>
+                      <SelectItem value="producao">Produção</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={() => void confirmar()} disabled={processando || !donoId}>
+                {processando ? 'Importando…' : 'Confirmar importação'}
+              </Button>
+              {!donoId && (
+                <p className="text-xs text-muted-foreground">
+                  Escolha o dono do lote para habilitar a confirmação.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {relatorio && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">4. Relatório por linha</CardTitle>
+            <CardDescription>
+              {relatorio.total} linha(s): {relatorio.novas} nova(s) · {relatorio.repetidas}{' '}
+              repetida(s) · {relatorio.incompletas} incompleta(s) · {relatorio.erros} erro(s)
+              {relatorio.criados
+                ? ` — criados: ${relatorio.criados.empresas} empresa(s), ${relatorio.criados.pessoas} pessoa(s), ${relatorio.criados.leads} lead(s)`
+                : ''}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-96 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="py-1 pr-2">#</th>
+                    <th className="py-1 pr-2">Resultado</th>
+                    <th className="py-1 pr-2">Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {relatorio.linhas.map((l) => (
+                    <tr key={l.numero} className="border-b">
+                      <td className="py-1 pr-2 text-muted-foreground">{l.numero}</td>
+                      <td className={'py-1 pr-2 font-medium ' + (CORES_STATUS[l.status] ?? '')}>
+                        {l.status}
+                      </td>
+                      <td className="py-1 pr-2 text-muted-foreground">{l.erros || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Repetir o mesmo arquivo com o mesmo mapeamento devolve este relatório — nenhuma pessoa
+              é duplicada. A retomada e o desfazer do lote vêm na próxima task.
             </p>
           </CardContent>
         </Card>
