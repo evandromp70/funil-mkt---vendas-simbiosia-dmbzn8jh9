@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import { parseCsv, detectarSeparador, neutralizarFormula, type CsvResultado } from '@/services/csv'
 import {
   confirmarImportacao,
+  reverterImportacao,
   hashArquivo,
   getListas,
   getUsuarios,
@@ -60,7 +61,24 @@ export default function Importar() {
   const [ambiente, setAmbiente] = useState('teste')
   const [listas, setListas] = useState<Array<{ id: string; nome: string }>>([])
   const [usuarios, setUsuarios] = useState<Array<{ id: string; nome: string }>>([])
+  const [reversao, setReversao] = useState<ReversaoImportacao | null>(null)
+  const [confirmandoReversao, setConfirmandoReversao] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const desfazerLote = async () => {
+    if (!relatorio) return
+    setErro('')
+    setProcessando(true)
+    try {
+      const r = await reverterImportacao(relatorio.importacaoId)
+      setReversao(r)
+      setAviso(r.detalhe ?? '')
+    } catch (e) {
+      setErro('Falha ao desfazer: ' + String((e as Error).message ?? e))
+    } finally {
+      setProcessando(false)
+    }
+  }
 
   const carregarArquivo = async (arquivo: File) => {
     setErro('')
@@ -400,8 +418,57 @@ export default function Importar() {
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               Repetir o mesmo arquivo com o mesmo mapeamento devolve este relatório — nenhuma pessoa
-              é duplicada. A retomada e o desfazer do lote vêm na próxima task.
+              é duplicada.
             </p>
+
+            {reversao ? (
+              <div className="mt-3 space-y-2 rounded-md border p-3">
+                <p className="text-sm font-medium">
+                  {reversao.aplicavel
+                    ? 'Lote desfeito'
+                    : 'Reversão com revisão — nada foi alterado'}
+                </p>
+                {reversao.aplicavel && (
+                  <p className="text-xs text-muted-foreground">
+                    Removidos: {reversao.leadsRemovidos ?? 0} lead(s) ·{' '}
+                    {reversao.pessoasRemovidas ?? 0} pessoa(s) · {reversao.empresasRemovidas ?? 0}{' '}
+                    empresa(s) · {reversao.membrosRemovidos ?? 0} membro(s) de lista ·{' '}
+                    {reversao.origensRemovidas ?? 0} origem(ns).
+                  </p>
+                )}
+                {(reversao.linhasRevisao ?? []).length > 0 && (
+                  <ul className="list-inside list-disc text-xs text-muted-foreground">
+                    {reversao.linhasRevisao!.map((r) => (
+                      <li key={r.numero}>
+                        Linha {r.numero}: {r.motivo}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  disabled={processando || confirmandoReversao}
+                  onClick={() => {
+                    if (confirmandoReversao) {
+                      setConfirmandoReversao(false)
+                      void desfazerLote()
+                    } else {
+                      setConfirmandoReversao(true)
+                    }
+                  }}
+                >
+                  {confirmandoReversao ? 'Confirmar: desfazer este lote?' : 'Desfazer este lote'}
+                </Button>
+                {confirmandoReversao && (
+                  <Button variant="ghost" onClick={() => setConfirmandoReversao(false)}>
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

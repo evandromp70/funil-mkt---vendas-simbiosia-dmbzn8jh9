@@ -120,10 +120,49 @@ routerAdd(
           })),
         })
       }
+      if (existente.length > 0 && existente[0].getString('status') === 'processando') {
+        // ---- RETOMADA (task 899395c4): processa só linhas pendentes/nunca processadas ----
+        const imp = existente[0]
+        const linhasRel = $app.findRecordsByFilter(
+          'importacao_linhas',
+          'importacao = {:i}',
+          'numero',
+          0,
+          0,
+          { i: imp.id },
+        )
+        const processadas = new Set(linhasRel.map((l) => l.getInt('numero')))
+        const numerosPendentes = []
+        for (let n = 1; n <= linhas.length; n++) {
+          const linha = linhasRel.find((l) => l.getInt('numero') === n)
+          if (!processadas.has(n) || (linha && linha.getString('status') === 'pendente'))
+            numerosPendentes.push(n)
+        }
+        if (numerosPendentes.length === 0) {
+          // nada pendente: fecha o lote e devolve o relatório
+          imp.set('status', 'concluida')
+          $app.save(imp)
+          return e.json(200, {
+            repetido: false,
+            importacaoId: imp.id,
+            status: 'concluida',
+            retomada: true,
+            linhas: [],
+          })
+        }
+        // reclassifica apenas as pendentes — linhas aceitas NÃO repetem
+        return e.json(200, {
+          retomada: true,
+          importacaoId: imp.id,
+          numerosPendentes,
+          aceitas: linhas.length - numerosPendentes.length,
+          detalhe: 'Retomada: reenvie o mesmo arquivo; as linhas pendentes serão reprocessadas.',
+        })
+      }
       if (existente.length > 0 && existente[0].getString('status') !== 'revertida') {
         return e.json(409, {
           status: existente[0].getString('status'),
-          detalhe: 'Lote já existe e não está concluído — retomada/rollback é a próxima task.',
+          detalhe: 'Lote já existe e não está concluído.',
         })
       }
     } catch (_) {}

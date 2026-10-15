@@ -25,6 +25,22 @@ export type RelatorioImportacao = {
   linhas: LinhaRelatorio[]
 }
 
+export const reverterImportacao = (importacaoId: string): Promise<ReversaoImportacao> =>
+  pb.send('/backend/v1/importacoes/reverter', { method: 'POST', body: { importacaoId } })
+
+export type ReversaoImportacao = {
+  status: string
+  aplicavel: boolean
+  leadsRemovidos?: number
+  pessoasRemovidas?: number
+  empresasRemovidas?: number
+  membrosRemovidos?: number
+  origensRemovidas?: number
+  linhasReversiveis?: number[]
+  linhasRevisao?: Array<{ numero: number; motivo: string }>
+  detalhe?: string
+}
+
 export const confirmarImportacao = (payload: {
   nome_arquivo: string
   arquivo_hash: string
