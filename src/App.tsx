@@ -10,6 +10,7 @@ import LeadDetail from './pages/LeadDetail'
 import Usuarios from './pages/Usuarios'
 import Painel from './pages/Painel'
 import Cadastro from './pages/Cadastro'
+import Importar from './pages/Importar'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -68,6 +69,14 @@ const App = () => (
               element={
                 <Protected>
                   <Cadastro />
+                </Protected>
+              }
+            />
+            <Route
+              path="/importar"
+              element={
+                <Protected>
+                  <Importar />
                 </Protected>
               }
             />
