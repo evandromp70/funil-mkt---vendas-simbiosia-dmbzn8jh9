@@ -165,6 +165,8 @@ routerAdd(
           detalhe: 'Lote já existe e não está concluído.',
         })
       }
+      // lote REVERTIDO: a chave fica livre — o reenvio reprocessa como novo lote
+      // (o índice único é parcial: só lotes vivos o ocupam; ver migração 0017)
     } catch (_) {}
 
     // ---- cria o lote ----
