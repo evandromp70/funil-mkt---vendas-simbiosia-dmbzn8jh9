@@ -450,7 +450,7 @@ export default function Importar() {
               <div className="mt-3 flex items-center gap-2">
                 <Button
                   variant="outline"
-                  disabled={processando || confirmandoReversao}
+                  disabled={processando}
                   onClick={() => {
                     if (confirmandoReversao) {
                       setConfirmandoReversao(false)
@@ -463,9 +463,15 @@ export default function Importar() {
                   {confirmandoReversao ? 'Confirmar: desfazer este lote?' : 'Desfazer este lote'}
                 </Button>
                 {confirmandoReversao && (
-                  <Button variant="ghost" onClick={() => setConfirmandoReversao(false)}>
-                    Cancelar
-                  </Button>
+                  <>
+                    <Button variant="ghost" onClick={() => setConfirmandoReversao(false)}>
+                      Cancelar
+                    </Button>
+                    <p className="text-xs text-amber-700">
+                      Clique de novo para confirmar — o lote será desfeito (os dados criados por ele
+                      serão removidos; o que é compartilhado com outros lotes permanece).
+                    </p>
+                  </>
                 )}
               </div>
             )}
