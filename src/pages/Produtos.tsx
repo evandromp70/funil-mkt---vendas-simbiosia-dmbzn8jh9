@@ -842,6 +842,9 @@ export default function Produtos() {
                         <Button variant="ghost" size="sm" onClick={() => void abrirEntrevista(p)}>
                           Entrevista
                         </Button>
+                        <Button variant="ghost" size="sm" onClick={() => void abrirRegua(p)}>
+                          Régua
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
