@@ -189,6 +189,41 @@ export default function Produtos() {
     setReguaCriterios(nova)
   }
 
+  // texto cru do campo Valor (o parse só acontece no blur — digitar não pode quebrar a página)
+  const [valoresTexto, setValoresTexto] = useState<Record<string, string>>({})
+
+  // parse seguro: JSON válido (número, lista, bool, null) vira valor estruturado;
+  // qualquer outra coisa fica como texto puro — NUNCA lança erro
+  const parseValorSeguro = (texto: string): unknown => {
+    const t = texto.trim()
+    if (!t) return ''
+    try {
+      return JSON.parse(t)
+    } catch (_) {
+      return texto
+    }
+  }
+
+  // valor → texto cru para o input (string sem aspas; resto em JSON)
+  const textoDoValor = (valor: unknown): string => {
+    if (valor === undefined || valor === null) return ''
+    if (typeof valor === 'string') return valor
+    try {
+      return JSON.stringify(valor)
+    } catch (_) {
+      return ''
+    }
+  }
+
+  const confirmarValor = (idCriterio: string, idx: number) => {
+    const texto = valoresTexto[idCriterio]
+    if (texto === undefined) return // saiu sem digitar — nada a fazer
+    atualizarCriterio(idx, 'valor', parseValorSeguro(texto))
+    const novo = { ...valoresTexto }
+    delete novo[idCriterio]
+    setValoresTexto(novo)
+  }
+
   const adicionarTermo = () => {
     setReguaCriterios([
       ...reguaCriterios,
@@ -654,16 +689,20 @@ export default function Produtos() {
                       <div className="sm:col-span-1">
                         <Label className="text-xs">Valor</Label>
                         <Input
-                          value={JSON.stringify((c as Termo).valor) ?? ''}
-                          onChange={(e) => {
-                            let v: unknown = e.target.value
-                            try {
-                              v = JSON.parse(e.target.value)
-                            } catch (_) {
-                              // valor textual sem JSON — fica como string
-                            }
-                            atualizarCriterio(i, 'valor', v)
+                          value={
+                            valoresTexto[c.id] ??
+                            (typeof (c as Termo).valor === 'string'
+                              ? ((c as Termo).valor as string)
+                              : JSON.stringify((c as Termo).valor))
+                          }
+                          onChange={(e) =>
+                            setValoresTexto({ ...valoresTexto, [c.id]: e.target.value })
+                          }
+                          onBlur={() => confirmarValor(c.id, i)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') confirmarValor(c.id, i)
                           }}
+                          placeholder={'texto, 50, ["industria"]'}
                         />
                       </div>
                     </>
