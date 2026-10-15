@@ -36,6 +36,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { getSistemaConfig, recursoHabilitado } from '@/services/sistema'
+import { getProdutos, type Produto } from '@/services/produtos'
+import pb from '@/lib/pocketbase/client'
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>()
@@ -87,6 +89,39 @@ export default function LeadDetail() {
   const [aPauta, setAPauta] = useState('')
   const [aDecisoes, setADecisoes] = useState('')
   const [aProximo, setAProximo] = useState('')
+
+  // SPEC-1-005 (task 3b93879f): pontuação por produto — a UI só EXIBE o retorno do backend
+  const [produtosComRegua, setProdutosComRegua] = useState<Produto[]>([])
+  const [pontuacoes, setPontuacoes] = useState<Record<string, Record<string, unknown>>>({})
+  const [scoreLoading, setScoreLoading] = useState('')
+
+  const calcularPontuacao = async (produtoId: string) => {
+    if (!id) return
+    setScoreLoading(produtoId)
+    try {
+      const r = await pb.send('/backend/v1/scoring/calcular', {
+        method: 'POST',
+        body: JSON.stringify({ leadId: id, produtoId }),
+      })
+      setPontuacoes((p) => ({ ...p, [produtoId]: r as Record<string, unknown> }))
+    } catch (e) {
+      setNotice('Falha na pontuação: ' + String((e as Error).message ?? e))
+    } finally {
+      setScoreLoading('')
+    }
+  }
+
+  const carregarProdutos = async () => {
+    try {
+      const todos = await getProdutos()
+      setProdutosComRegua(todos.filter((p) => p.ativo))
+    } catch (_) {
+      // sem produtos ativos, a seção simplesmente não aparece
+    }
+  }
+  useEffect(() => {
+    void carregarProdutos()
+  }, [])
 
   const loadAll = async () => {
     if (!id) return
@@ -896,6 +931,68 @@ export default function LeadDetail() {
                 : 'Registre o motivo da perda nas observações — isso alimenta a revisão do funil.'}
             </CardDescription>
           </CardHeader>
+        </Card>
+      )}
+
+      {/* SPEC-1-005 (task 3b93879f): pontuação por produto — lê o retorno do backend */}
+      {produtosComRegua.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Pontuação por produto</CardTitle>
+            <CardDescription>
+              Aplica a régua aprovada de cada produto aos dados deste lead. O cálculo é do servidor
+              — os motivos mostram o porquê de cada nota.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {produtosComRegua.map((p) => {
+              const r = pontuacoes[p.id]
+              return (
+                <div key={p.id} className="rounded-md border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium">{p.nome}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={scoreLoading === p.id}
+                      onClick={() => void calcularPontuacao(p.id)}
+                    >
+                      {scoreLoading === p.id ? 'Calculando…' : 'Calcular'}
+                    </Button>
+                  </div>
+                  {r && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-sm">
+                        {r.status === 'calculada' && (
+                          <>
+                            <span className="font-semibold">
+                              {String(r.valor)} — faixa {String(r.faixa)}
+                            </span>{' '}
+                            <span className="text-xs text-muted-foreground">
+                              (régua v{String(r.versao)})
+                            </span>
+                          </>
+                        )}
+                        {r.status === 'pendente' && <Badge variant="secondary">Pendente</Badge>}
+                        {r.status === 'eliminada' && <Badge variant="destructive">Eliminado</Badge>}
+                      </p>
+                      <ul className="list-inside list-disc text-xs text-muted-foreground">
+                        {(
+                          (r.motivos as Array<{
+                            id: string
+                            resultado: string
+                            descricao: string
+                          }>) ?? []
+                        ).map((m, i) => (
+                          <li key={i}>{m.descricao}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </CardContent>
         </Card>
       )}
     </div>
