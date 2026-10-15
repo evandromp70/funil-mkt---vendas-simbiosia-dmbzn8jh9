@@ -167,6 +167,40 @@ export const elegibilidadeFria = (
   return { status: 'elegivel' }
 }
 
+// ---- FUSAO-REVERSIVEL (task 1b7f6fc7): avaliação de reversão ----
+// Função pura: compara o snapshot da fusão com o estado ATUAL de origem e destino.
+// Alteração posterior em qualquer um → revisão (não sobrescreve); sem alterações → aplicável.
+export type SnapshotPessoa = {
+  nome?: string
+  email_norm?: string
+  telefone_norm?: string
+  linkedin_norm?: string
+} | null
+
+export const avaliarReversao = (
+  snapshot: SnapshotPessoa,
+  origemAtual: Record<string, unknown> | null,
+  destinoAtual: Record<string, unknown> | null,
+  _destinoAntes: Record<string, unknown> | null,
+): { status: 'aplicavel' | 'revisao'; diferencas: string[] } => {
+  if (!snapshot) return { status: 'revisao', diferencas: ['snapshot ausente'] }
+  const diferencas: string[] = []
+  for (const [lado, atual] of [
+    ['origem', origemAtual],
+    ['destino', destinoAtual],
+  ] as const) {
+    if (!atual) continue
+    for (const campo of Object.keys(snapshot)) {
+      const antes = (snapshot as Record<string, unknown>)[campo]
+      const agora = atual[campo]
+      if ((antes ?? '') !== (agora ?? '')) diferencas.push(`${lado}.${campo}`)
+    }
+  }
+  return diferencas.length === 0
+    ? { status: 'aplicavel', diferencas }
+    : { status: 'revisao', diferencas }
+}
+
 export const resolverIdentidade = (
   novo: {
     nome?: string
