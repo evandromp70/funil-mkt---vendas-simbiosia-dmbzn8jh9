@@ -88,9 +88,17 @@ routerAdd(
     const chaveLote = [hash, pares, listaId, coorte, donoId, ambiente].join('::')
 
     try {
-      const existente = $app.findRecordsByFilter('importacoes', 'chave_lote = {:c}', '', 1, 0, {
-        c: chaveLote,
-      })
+      // TODOS os lotes com a mesma chave, do mais recente para o mais antigo — o lote VIVO
+      // (não revertido) é o que manda; um lote revertido antigo não pode escondê-lo.
+      const todos = $app.findRecordsByFilter(
+        'importacoes',
+        'chave_lote = {:c} && status != {:r}',
+        '-created',
+        0,
+        0,
+        { c: chaveLote, r: 'revertida' },
+      )
+      const existente = todos
       if (existente.length > 0 && existente[0].getString('status') === 'concluida') {
         const imp = existente[0]
         const linhasRel = $app.findRecordsByFilter(
