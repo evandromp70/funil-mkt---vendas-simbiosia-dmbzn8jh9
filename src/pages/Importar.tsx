@@ -105,7 +105,9 @@ export default function Importar() {
         )
         const eu = us.find((u) => u.id === (inputRef.current?.dataset?.uid ?? ''))
         if (eu) setDonoId(eu.id)
-      } catch (_) {}
+      } catch (_) {
+        // contexto de confirmação é opcional — sem listas/usuários, o admin digita/seleciona depois
+      }
     }
     setResultado(r)
   }
