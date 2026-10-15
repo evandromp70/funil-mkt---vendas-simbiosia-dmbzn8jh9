@@ -1,37 +1,30 @@
 // SPEC-1-004 (task 46c0fd51): validação da entrevista no backend — CA-1-004-03.
 // O backend NÃO confia no payload: confirmação com pendência é NEGADA; autor e data
 // de confirmação são registrados no servidor. Confirmação NÃO ativa o produto.
-// Toda via termina em e.next() ou throw (guia 3.3).
-const ROTEIRO_CHAVES = [
-  'dor_area',
-  'decisor',
-  'segmento_porte',
-  'localizacao',
-  'campos_fontes',
-  'criterios',
-  'pesos',
-  'eliminatorias',
-  'faixas',
-  'abordagem',
-]
-
-const pendenciasDe = (respostasJson) => {
-  let respostas = {}
-  try {
-    respostas = JSON.parse(respostasJson || '{}')
-  } catch (_) {}
-  const pendencias = []
-  for (const chave of ROTEIRO_CHAVES) {
-    if (!String(respostas[chave] ?? '').trim()) pendencias.push(chave)
-  }
-  return pendencias
-}
-
+// Toda via termina em e.next() ou throw (guia 3.3). Funções ficam inline no callback
+// (hooks Skip executam callbacks em VM própria — sem referência a declaração top-level).
 onRecordCreate((e) => {
   const rec = e.record
   // nasce sempre rascunho; pendências calculadas no servidor
   rec.set('status', 'rascunho')
-  rec.set('pendencias', JSON.stringify(pendenciasDe(rec.getString('respostas'))))
+  let respostas = {}
+  try {
+    respostas = JSON.parse(rec.getString('respostas') || '{}')
+  } catch (_) {}
+  const CHAVES = [
+    'dor_area',
+    'decisor',
+    'segmento_porte',
+    'localizacao',
+    'campos_fontes',
+    'criterios',
+    'pesos',
+    'eliminatorias',
+    'faixas',
+    'abordagem',
+  ]
+  const pendencias = CHAVES.filter((c) => !String(respostas[c] ?? '').trim())
+  rec.set('pendencias', JSON.stringify(pendencias))
   rec.set('confirmada_por', '')
   rec.set('confirmada_em', '')
   return e.next()
@@ -39,7 +32,23 @@ onRecordCreate((e) => {
 
 onRecordUpdate((e) => {
   const rec = e.record
-  const pendencias = pendenciasDe(rec.getString('respostas'))
+  let respostas = {}
+  try {
+    respostas = JSON.parse(rec.getString('respostas') || '{}')
+  } catch (_) {}
+  const CHAVES = [
+    'dor_area',
+    'decisor',
+    'segmento_porte',
+    'localizacao',
+    'campos_fontes',
+    'criterios',
+    'pesos',
+    'eliminatorias',
+    'faixas',
+    'abordagem',
+  ]
+  const pendencias = CHAVES.filter((c) => !String(respostas[c] ?? '').trim())
   rec.set('pendencias', JSON.stringify(pendencias))
 
   if (rec.getString('status') === 'confirmada') {
