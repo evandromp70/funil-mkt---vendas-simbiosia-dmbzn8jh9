@@ -89,6 +89,9 @@ export default function Produtos() {
   const [reguaVersoes, setReguaVersoes] = useState<Array<Record<string, unknown>>>([])
   const [reguaEditandoId, setReguaEditandoId] = useState('')
   const [errosRegua, setErrosRegua] = useState<Record<string, string>>({})
+  // SPEC-1-005 (task 2faac03b): jobs de repontuação do produto (régua aprovada cria job)
+  const [jobsVersoes, setJobsVersoes] = useState<Array<Record<string, unknown>>>([])
+  const [jobProcessando, setJobProcessando] = useState('')
 
   const abrirRegua = async (p: Produto) => {
     setReguaProdutoId(p.id)
@@ -101,6 +104,15 @@ export default function Produtos() {
         sort: '-versao',
       })
       setReguaVersoes(versoes as unknown as Array<Record<string, unknown>>)
+      try {
+        const jobs = await pb.collection('jobs_pontuacao').getFullList({
+          filter: pb.filter('produto = {:p}', { p: p.id }),
+          sort: '-versao',
+        })
+        setJobsVersoes(jobs as unknown as Array<Record<string, unknown>>)
+      } catch (_) {
+        setJobsVersoes([])
+      }
       const rascunho = versoes.find((v) => v.status === 'rascunho')
       const aprovada = versoes.find((v) => v.status === 'aprovada')
       const base = rascunho ?? aprovada
@@ -182,6 +194,40 @@ export default function Produtos() {
       setErro('Falha na régua: ' + String((err as Error).message ?? err))
     } finally {
       setProcessando(false)
+    }
+  }
+
+  // SPEC-1-005 (task 2faac03b): executar/reverter o job de repontuação (só admin no backend)
+  const operarJob = async (jobId: string, acao: 'executar' | 'reverter') => {
+    setErro('')
+    setAviso('')
+    setJobProcessando(jobId + acao)
+    try {
+      const r = await pb.send('/backend/v1/scoring/repontuar', {
+        method: 'POST',
+        body: JSON.stringify({ jobId, acao, maxLotes: 20 }),
+      })
+      const res = r as Record<string, unknown>
+      setAviso(
+        acao === 'executar'
+          ? 'Job executado: ' +
+              String(res.status) +
+              ' — processados ' +
+              String(res.processados) +
+              ', ignorados ' +
+              String(res.ignorados) +
+              ', erros ' +
+              String(res.erros) +
+              '.'
+          : 'Job revertido — ' +
+              String(res.restaurados) +
+              ' ponteiro(s) restaurado(s); linhas permanecem no histórico.',
+      )
+      await abrirRegua(produtos.find((p) => p.id === reguaProdutoId)!)
+    } catch (err) {
+      setErro('Falha no job: ' + String((err as Error).message ?? err))
+    } finally {
+      setJobProcessando('')
     }
   }
 
@@ -802,6 +848,61 @@ export default function Produtos() {
                 Aprovar régua
               </Button>
             </div>
+
+            {jobsVersoes.length > 0 && (
+              <div className="overflow-x-auto border-t pt-2">
+                <p className="text-xs font-medium">Repontuação (job por versão aprovada)</p>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-1 pr-2">Versão</th>
+                      <th className="py-1 pr-2">Status</th>
+                      <th className="py-1 pr-2">Processados</th>
+                      <th className="py-1 pr-2">Ignorados</th>
+                      <th className="py-1 pr-2">Erros</th>
+                      <th className="py-1 pr-2">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jobsVersoes.map((j) => (
+                      <tr key={String(j.id)} className="border-b">
+                        <td className="py-1 pr-2 font-medium">v{String(j.versao)}</td>
+                        <td className="py-1 pr-2">{String(j.status)}</td>
+                        <td className="py-1 pr-2">{String(j.processados ?? 0)}</td>
+                        <td className="py-1 pr-2">{String(j.ignorados ?? 0)}</td>
+                        <td className="py-1 pr-2">{String(j.erros ?? 0)}</td>
+                        <td className="py-1 pr-2">
+                          {(j.status === 'pendente' || j.status === 'executando') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={jobProcessando !== ''}
+                              onClick={() => void operarJob(String(j.id), 'executar')}
+                            >
+                              {jobProcessando === String(j.id) + 'executar'
+                                ? 'Executando…'
+                                : 'Executar'}
+                            </Button>
+                          )}
+                          {j.status === 'concluido' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={jobProcessando !== ''}
+                              onClick={() => void operarJob(String(j.id), 'reverter')}
+                            >
+                              {jobProcessando === String(j.id) + 'reverter'
+                                ? 'Revertendo…'
+                                : 'Reverter'}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {reguaVersoes.length > 0 && (
               <div className="overflow-x-auto border-t pt-2">
