@@ -110,6 +110,8 @@ export default function LeadDetail() {
     ;(acc[h.produto] ??= []).push(h)
     return acc
   }, {})
+  // SPEC-1-005 (task 2faac03b): ponteiro da nota vigente por produto (notas_atuais em leads)
+  const [notasAtuais, setNotasAtuais] = useState<Record<string, string>>({})
 
   // Task "edição de lead direto no detalhe" (16/10/2026): admin edita tudo; vendedor só
   // o dele (regras da coleção + hook). Etapa NÃO entra no editor — muda pelo fluxo.
@@ -250,6 +252,17 @@ export default function LeadDetail() {
           updated: h.updated,
         })),
       )
+      // ponteiro da nota vigente (o job de repontuação e o Calcular publicam aqui)
+      try {
+        const l = await pb.collection('leads').getOne(id)
+        const mapa =
+          l.notas_atuais && typeof l.notas_atuais === 'object'
+            ? (l.notas_atuais as Record<string, string>)
+            : {}
+        setNotasAtuais(mapa)
+      } catch (_) {
+        setNotasAtuais({})
+      }
     } catch (_) {
       // sem histórico (lead sem pontuação ainda) — seção não aparece
     }
@@ -1253,7 +1266,8 @@ export default function LeadDetail() {
                       }>
                     ).map((h, i) => (
                       <li key={i}>
-                        v{h.versao} —{' '}
+                        v{h.versao}
+                        {notasAtuais[prodId] === (h as { id: string }).id ? ' (atual)' : ''} —{' '}
                         {h.status === 'calculada'
                           ? `${String(h.valor)} (faixa ${h.faixa})`
                           : h.status === 'pendente'
