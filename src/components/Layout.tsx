@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 
 // marcador de build visível no rodapé — acaba a dúvida de qual bundle o navegador rodou
 // (atualizado manualmente a cada versão publicada)
-const VERSAO_BUILD = 'v0.0.86-rota-editar'
+const VERSAO_BUILD = 'v0.0.88-dupla-via'
 
 export default function Layout() {
   const { isAuthenticated, signOut } = useAuth()
