@@ -153,15 +153,6 @@ export default function LeadDetail() {
     setEditando(true)
   }
 
-  // guarda-tempo: nenhuma etapa do salvar pode deixar o botão preso em "Salvando…"
-  const estourar = (ms: number, oque: string) =>
-    new Promise<never>((_, rej) =>
-      setTimeout(
-        () => rej(new Error('Tempo excedido ao salvar ' + oque + ' — tente novamente.')),
-        ms,
-      ),
-    )
-
   const salvarEdicao = async () => {
     if (!id || !lead) return
     setSalvandoEdicao(true)
@@ -178,12 +169,11 @@ export default function LeadDetail() {
       if (eContatoNome.trim()) dados.contato_nome = eContatoNome.trim()
       if (eContatoEmail.trim()) dados.contato_email = eContatoEmail.trim()
       if (eContatoTel.trim()) dados.contato_telefone = eContatoTel.trim()
-      // fetch DIRETO com token no host da API (o mesmo que o SDK usa — provado do
-      // navegador: PATCH 200 em ~12ms; a MESMA ORIGEM .goskip.app devolve 405 do nginx
-      // para PATCH — só serve o frontend). O travamento original era a promise do SDK.
-      // ROTA PRÓPRIA via pb.send (POST) — mecanismo provado funcionar no navegador do
-      // José (POST scoring 200 em 12ms; PATCH cru pendura). O servidor valida ACL,
-      // whitelist de campos e grava; owner/etapa/score nunca passam por aqui.
+      // DUPLA VIA em corrida (a primeira que responder vale): pb.send do SDK — provado
+      // no navegador do José (botão Calcular responde em 12ms) — e fetch cru POST —
+      // provado no navegador de teste (200 em 14ms, gravação confirmada). O servidor
+      // valida ACL, whitelist e grava; owner/etapa/score nunca passam por aqui.
+      // Gravação idempotente: as duas vias aplicam o mesmo patch no servidor.
       await Promise.race([
         pb.send('/backend/v1/leads/editar', {
           method: 'POST',
