@@ -178,9 +178,10 @@ export default function LeadDetail() {
       if (eContatoNome.trim()) dados.contato_nome = eContatoNome.trim()
       if (eContatoEmail.trim()) dados.contato_email = eContatoEmail.trim()
       if (eContatoTel.trim()) dados.contato_telefone = eContatoTel.trim()
-      // fetch DIRETO na MESMA ORIGEM da página (produção .goskip.app é navegável do
-      // navegador; o host interno shrd00 não é — era a causa do travamento).
-      const base = window.location.origin
+      // fetch DIRETO com token no host da API (o mesmo que o SDK usa — provado do
+      // navegador: PATCH 200 em ~12ms; a MESMA ORIGEM .goskip.app devolve 405 do nginx
+      // para PATCH — só serve o frontend). O travamento original era a promise do SDK.
+      const base = import.meta.env.VITE_POCKETBASE_URL
       const token = pb.authStore.token
       const patchDireto = async (path: string, corpo: Record<string, unknown>) => {
         const r = await fetch(base + path, {
