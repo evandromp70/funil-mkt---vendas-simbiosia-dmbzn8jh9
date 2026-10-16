@@ -153,36 +153,53 @@ export default function LeadDetail() {
     setEditando(true)
   }
 
+  // guarda-tempo: nenhuma etapa do salvar pode deixar o botão preso em "Salvando…"
+  const estourar = (ms: number, oque: string) =>
+    new Promise<never>((_, rej) =>
+      setTimeout(
+        () => rej(new Error('Tempo excedido ao salvar ' + oque + ' — tente novamente.')),
+        ms,
+      ),
+    )
+
   const salvarEdicao = async () => {
     if (!id || !lead) return
     setSalvandoEdicao(true)
     setErro('')
     try {
-      await updateLead(id, {
+      // só campos preenchidos vão no payload (undefined nunca viaja)
+      const dados: Record<string, unknown> = {
         nome_empresa: eNome.trim() || lead.nome_empresa,
-        segmento: eSegmento.trim() || undefined,
-        uf: eUf.trim() || undefined,
-        cidade: eCidade.trim() || undefined,
-        contato_nome: eContatoNome.trim() || undefined,
-        contato_email: eContatoEmail.trim() || undefined,
-        contato_telefone: eContatoTel.trim() || undefined,
         observacoes: eObs,
-      })
+      }
+      if (eSegmento.trim()) dados.segmento = eSegmento.trim()
+      if (eUf.trim()) dados.uf = eUf.trim()
+      if (eCidade.trim()) dados.cidade = eCidade.trim()
+      if (eContatoNome.trim()) dados.contato_nome = eContatoNome.trim()
+      if (eContatoEmail.trim()) dados.contato_email = eContatoEmail.trim()
+      if (eContatoTel.trim()) dados.contato_telefone = eContatoTel.trim()
+      await Promise.race([updateLead(id, dados), estourar(15000, 'o lead')])
       if (eEmpresaId) {
-        await pb.collection('empresas').update(eEmpresaId, {
-          setor: eSetor.trim() || undefined,
-          porte: ePorte.trim() || undefined,
-        })
+        const emp: Record<string, unknown> = {}
+        if (eSetor.trim()) emp.setor = eSetor.trim()
+        if (ePorte.trim()) emp.porte = ePorte.trim()
+        if (Object.keys(emp).length > 0) {
+          await Promise.race([
+            pb.collection('empresas').update(eEmpresaId, emp),
+            estourar(15000, 'a empresa'),
+          ])
+        }
       }
       setNotice('Lead atualizado.')
       setEditando(false)
-      await loadAll()
-      await carregarHistorico()
     } catch (e) {
       setErro('Falha ao salvar: ' + String((e as Error).message ?? e))
     } finally {
       setSalvandoEdicao(false)
     }
+    // recarga em segundo plano — nunca trava o botão
+    void loadAll()
+    void carregarHistorico()
   }
 
   const calcularPontuacao = async (produtoId: string) => {
