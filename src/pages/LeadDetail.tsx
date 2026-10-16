@@ -178,14 +178,30 @@ export default function LeadDetail() {
       if (eContatoNome.trim()) dados.contato_nome = eContatoNome.trim()
       if (eContatoEmail.trim()) dados.contato_email = eContatoEmail.trim()
       if (eContatoTel.trim()) dados.contato_telefone = eContatoTel.trim()
-      await Promise.race([updateLead(id, dados), estourar(15000, 'o lead')])
+      // fetch DIRETO com token — padrão provado (responde 200); a promise do SDK pendura
+      // no navegador (ver artifacts/diagnostico-edicao-lead.md)
+      const base = import.meta.env.VITE_POCKETBASE_URL
+      const token = pb.authStore.token
+      const patchDireto = async (path: string, corpo: Record<string, unknown>) => {
+        const r = await fetch(base + path, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify(corpo),
+        })
+        if (!r.ok) throw new Error('HTTP ' + r.status)
+        return r.json()
+      }
+      await Promise.race([
+        patchDireto('/api/collections/leads/records/' + id, dados),
+        estourar(15000, 'o lead'),
+      ])
       if (eEmpresaId) {
         const emp: Record<string, unknown> = {}
         if (eSetor.trim()) emp.setor = eSetor.trim()
         if (ePorte.trim()) emp.porte = ePorte.trim()
         if (Object.keys(emp).length > 0) {
           await Promise.race([
-            pb.collection('empresas').update(eEmpresaId, emp),
+            patchDireto('/api/collections/empresas/records/' + eEmpresaId, emp),
             estourar(15000, 'a empresa'),
           ])
         }
