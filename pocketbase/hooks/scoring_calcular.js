@@ -9,6 +9,18 @@ routerAdd(
   'POST',
   '/backend/v1/scoring/calcular',
   (e) => {
+    // ponteiro da nota vigente por produto (notas_atuais em leads) — usado pelo histórico
+    // "(atual)" e pela reversão do job de repontuação (task 2faac03b).
+    // INLINE no callback: hooks Skip executam callbacks em VM própria (sem top-level).
+    var publicarPonteiro = function (lead, produtoId, pontuacaoId) {
+      let mapa = {}
+      try {
+        mapa = JSON.parse(lead.getString('notas_atuais') || '{}') || {}
+      } catch (_) {}
+      mapa[produtoId] = pontuacaoId
+      lead.set('notas_atuais', JSON.stringify(mapa))
+      $app.save(lead)
+    }
     var OPERADORES_VALIDOS = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'contains', 'exists']
 
     var avaliarTermo = function (termo, dados) {
@@ -337,15 +349,3 @@ routerAdd(
   },
   $apis.requireAuth(),
 )
-
-// ponteiro da nota vigente por produto (notas_atuais em leads) — usado pelo histórico
-// "(atual)" e pela reversão do job de repontuação (task 2faac03b)
-function publicarPonteiro(lead, produtoId, pontuacaoId) {
-  let mapa = {}
-  try {
-    mapa = JSON.parse(lead.getString('notas_atuais') || '{}') || {}
-  } catch (_) {}
-  mapa[produtoId] = pontuacaoId
-  lead.set('notas_atuais', JSON.stringify(mapa))
-  $app.save(lead)
-}
