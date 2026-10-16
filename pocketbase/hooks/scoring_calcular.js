@@ -301,6 +301,7 @@ routerAdd(
         p.set('motivos', JSON.stringify(resultado.motivos))
         p.set('fontes', JSON.stringify(fontes))
         $app.save(p)
+        publicarPonteiro(lead, produtoId, p.id)
       } else {
         const colP = $app.findCollectionByNameOrId('pontuacoes')
         const nova = new Record(colP)
@@ -316,6 +317,7 @@ routerAdd(
         nova.set('fontes', JSON.stringify(fontes))
         nova.set('ambiente', ambiente)
         $app.save(nova)
+        publicarPonteiro(lead, produtoId, nova.id)
       }
     } catch (errP) {
       $app.logger().warn('falha ao persistir pontuação', 'err', String(errP))
@@ -335,3 +337,15 @@ routerAdd(
   },
   $apis.requireAuth(),
 )
+
+// ponteiro da nota vigente por produto (notas_atuais em leads) — usado pelo histórico
+// "(atual)" e pela reversão do job de repontuação (task 2faac03b)
+function publicarPonteiro(lead, produtoId, pontuacaoId) {
+  let mapa = {}
+  try {
+    mapa = JSON.parse(lead.getString('notas_atuais') || '{}') || {}
+  } catch (_) {}
+  mapa[produtoId] = pontuacaoId
+  lead.set('notas_atuais', JSON.stringify(mapa))
+  $app.save(lead)
+}

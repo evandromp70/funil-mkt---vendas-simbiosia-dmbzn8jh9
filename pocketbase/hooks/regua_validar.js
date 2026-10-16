@@ -285,6 +285,49 @@ onRecordUpdate((e) => {
   if (rec.getString('status') === 'aprovada' && antes.getString('status') !== 'aprovada') {
     rec.set('aprovado_por', e.auth?.id || '')
     rec.set('aprovado_em', new Date().toISOString().replace('T', ' '))
+
+    // SPEC-1-005 (task 2faac03b): aprovar régua cria o job de repontuação pendente e
+    // torna obsoletos os jobs PENDENTES de versões anteriores do mesmo produto+ambiente
+    // (a versão nova vira a vigente; job velho nunca sobrescreve).
+    const produtoId = rec.getString('produto')
+    const ambienteJob = rec.getString('ambiente') || 'teste'
+    try {
+      const pendentes = $app.findRecordsByFilter(
+        'jobs_pontuacao',
+        "produto = {:p} && ambiente = {:a} && status = 'pendente'",
+        '',
+        0,
+        0,
+        { p: produtoId, a: ambienteJob },
+      )
+      for (const j of pendentes) {
+        if (j.getInt('versao') !== rec.getInt('versao')) {
+          j.set('status', 'obsoleto')
+          $app.save(j)
+        }
+      }
+    } catch (errJ) {
+      $app.logger().warn('regua: falha ao tornar jobs obsoletos', 'err', String(errJ))
+    }
+    try {
+      const colJobs = $app.findCollectionByNameOrId('jobs_pontuacao')
+      const job = new Record(colJobs)
+      job.set('produto', produtoId)
+      job.set('regua', rec.id)
+      job.set('versao', rec.getInt('versao'))
+      job.set('status', 'pendente')
+      job.set('processados', 0)
+      job.set('ignorados', 0)
+      job.set('erros', 0)
+      job.set('ponteiros_antes', '{}')
+      job.set('publicados', '{}')
+      job.set('criado_por', e.auth?.id || '')
+      job.set('ambiente', ambienteJob)
+      $app.save(job)
+    } catch (errJob) {
+      // falha alta: aprovar régua sem job criado deixaria a repontuação invisível
+      throw new BadRequestError('Falha ao criar o job de repontuação: ' + String(errJob))
+    }
   }
   // arquivar preserva aprovado_por/em (histórico)
   return e.next()
