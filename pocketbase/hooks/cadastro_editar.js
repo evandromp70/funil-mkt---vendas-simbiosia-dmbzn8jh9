@@ -7,8 +7,18 @@ onRecordUpdate(
     const rec = e.record
     const antes = rec.original()
 
-    // admin passa sem restrição de dono (owner continua imutável)
-    const papel = e.auth ? e.auth.getString('role') : ''
+    // admin passa sem restrição de dono (owner continua imutável).
+    // e.auth pode não vir preenchido em hooks de update — resolve o papel direto da base.
+    let papel = ''
+    try {
+      const authId = e.requestInfo().auth?.id || (e.auth && e.auth.id) || ''
+      if (authId) {
+        const u = $app.findRecordById('_pb_users_auth_', authId)
+        papel = u.getString('role')
+      }
+    } catch (_) {
+      papel = ''
+    }
     if (papel === 'admin') {
       if (antes.getString('owner') && rec.getString('owner') !== antes.getString('owner'))
         throw new BadRequestError('owner é imutável.')
