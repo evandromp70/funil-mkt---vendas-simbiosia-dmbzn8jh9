@@ -8,7 +8,7 @@ onRecordUpdate(
     const antes = rec.original()
 
     // admin passa sem restrição de dono (owner continua imutável)
-    const papel = e.auth ? String(e.auth.get('role') || '') : ''
+    const papel = e.auth ? e.auth.getString('role') : ''
     if (papel === 'admin') {
       if (antes.getString('owner') && rec.getString('owner') !== antes.getString('owner'))
         throw new BadRequestError('owner é imutável.')
