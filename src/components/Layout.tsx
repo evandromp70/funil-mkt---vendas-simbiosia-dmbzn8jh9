@@ -2,6 +2,10 @@ import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 
+// marcador de build visível no rodapé — acaba a dúvida de qual bundle o navegador rodou
+// (atualizado manualmente a cada versão publicada)
+const VERSAO_BUILD = 'v0.0.86-rota-editar'
+
 export default function Layout() {
   const { isAuthenticated, signOut } = useAuth()
   const navigate = useNavigate()
@@ -62,6 +66,11 @@ export default function Layout() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         <Outlet />
       </main>
+      <footer className="border-t bg-white py-2">
+        <p className="mx-auto max-w-6xl px-4 text-right text-[10px] text-muted-foreground">
+          build {VERSAO_BUILD}
+        </p>
+      </footer>
     </div>
   )
 }

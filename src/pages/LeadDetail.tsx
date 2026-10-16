@@ -181,32 +181,24 @@ export default function LeadDetail() {
       // fetch DIRETO com token no host da API (o mesmo que o SDK usa — provado do
       // navegador: PATCH 200 em ~12ms; a MESMA ORIGEM .goskip.app devolve 405 do nginx
       // para PATCH — só serve o frontend). O travamento original era a promise do SDK.
-      const base = import.meta.env.VITE_POCKETBASE_URL
-      const token = pb.authStore.token
-      const patchDireto = async (path: string, corpo: Record<string, unknown>) => {
-        const r = await fetch(base + path, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify(corpo),
-        })
-        if (!r.ok) throw new Error('HTTP ' + r.status)
-        return r.json()
-      }
+      // ROTA PRÓPRIA via pb.send (POST) — mecanismo provado funcionar no navegador do
+      // José (POST scoring 200 em 12ms; PATCH cru pendura). O servidor valida ACL,
+      // whitelist de campos e grava; owner/etapa/score nunca passam por aqui.
       await Promise.race([
-        patchDireto('/api/collections/leads/records/' + id, dados),
-        estourar(15000, 'o lead'),
+        pb.send('/backend/v1/leads/editar', {
+          method: 'POST',
+          body: JSON.stringify({
+            leadId: id,
+            dados,
+            ...(eEmpresaId && (eSetor.trim() || ePorte.trim())
+              ? {
+                  empresa: { setor: eSetor.trim() || undefined, porte: ePorte.trim() || undefined },
+                }
+              : {}),
+          }),
+        }),
+        estourar(15000, 'o salvamento'),
       ])
-      if (eEmpresaId) {
-        const emp: Record<string, unknown> = {}
-        if (eSetor.trim()) emp.setor = eSetor.trim()
-        if (ePorte.trim()) emp.porte = ePorte.trim()
-        if (Object.keys(emp).length > 0) {
-          await Promise.race([
-            patchDireto('/api/collections/empresas/records/' + eEmpresaId, emp),
-            estourar(15000, 'a empresa'),
-          ])
-        }
-      }
       setNotice('Lead atualizado.')
       setEditando(false)
     } catch (e) {
