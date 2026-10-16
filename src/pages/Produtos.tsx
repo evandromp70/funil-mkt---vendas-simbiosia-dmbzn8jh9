@@ -119,9 +119,9 @@ export default function Produtos() {
       if (base) {
         setReguaEditandoId(base.id)
         setReguaMetodo((base.metodo as 'ponderado' | 'pontos') ?? 'ponderado')
-        setReguaCriterios(JSON.parse(base.criterios || '[]'))
-        setReguaEliminatorias(JSON.parse(base.regras_eliminatorias || '[]'))
-        setReguaFaixas(JSON.parse(base.faixas || '[]'))
+        setReguaCriterios(jsonTolerante(base.criterios))
+        setReguaEliminatorias(jsonTolerante(base.regras_eliminatorias))
+        setReguaFaixas(jsonTolerante(base.faixas))
       } else {
         setReguaEditandoId('')
         setReguaMetodo('ponderado')
@@ -253,6 +253,19 @@ export default function Produtos() {
 
   // parse seguro: JSON válido (número, lista, bool, null) vira valor estruturado;
   // qualquer outra coisa fica como texto puro — NUNCA lança erro
+  // SPEC-1-005: campos JSON do PocketBase chegam JÁ desserializados (objeto/array) —
+  // JSON.parse em cima disso lança "[object Object]" is not valid JSON. Parse tolerante.
+  const jsonTolerante = (v: unknown, fallback: unknown = []): unknown => {
+    if (typeof v === 'string') {
+      try {
+        return JSON.parse(v)
+      } catch (_) {
+        return fallback
+      }
+    }
+    return v ?? fallback
+  }
+
   const parseValorSeguro = (texto: string): unknown => {
     const t = texto.trim()
     if (!t) return ''
@@ -308,7 +321,7 @@ export default function Produtos() {
       if (existentes.length > 0) {
         setEntrevistaId(existentes[0].id)
         setEntrevistaStatus(existentes[0].status)
-        setRespostas(JSON.parse(existentes[0].respostas || '{}'))
+        setRespostas(jsonTolerante(existentes[0].respostas, {}))
       } else {
         setEntrevistaId('')
         setEntrevistaStatus('')
