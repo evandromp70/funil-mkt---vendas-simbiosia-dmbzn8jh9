@@ -111,6 +111,80 @@ export default function LeadDetail() {
     return acc
   }, {})
 
+  // Task "edição de lead direto no detalhe" (16/10/2026): admin edita tudo; vendedor só
+  // o dele (regras da coleção + hook). Etapa NÃO entra no editor — muda pelo fluxo.
+  const [editando, setEditando] = useState(false)
+  const [eNome, setENome] = useState('')
+  const [eSegmento, setESegmento] = useState('')
+  const [eUf, setEUf] = useState('')
+  const [eCidade, setECidade] = useState('')
+  const [eContatoNome, setEContatoNome] = useState('')
+  const [eContatoEmail, setEContatoEmail] = useState('')
+  const [eContatoTel, setEContatoTel] = useState('')
+  const [eObs, setEObs] = useState('')
+  const [eEmpresaId, setEEmpresaId] = useState('')
+  const [eSetor, setESetor] = useState('')
+  const [ePorte, setEPorte] = useState('')
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
+
+  const abrirEdicao = async () => {
+    if (!lead) return
+    setENome(lead.nome_empresa ?? '')
+    setESegmento(lead.segmento ?? '')
+    setEUf(lead.uf ?? '')
+    setECidade(lead.cidade ?? '')
+    setEContatoNome(lead.contato_nome ?? '')
+    setEContatoEmail(lead.contato_email ?? '')
+    setEContatoTel(lead.contato_telefone ?? '')
+    setEObs(lead.observacoes ?? '')
+    const empresaId = (lead as unknown as { empresa?: string }).empresa ?? ''
+    setEEmpresaId(empresaId)
+    setESetor('')
+    setEPorte('')
+    if (empresaId) {
+      try {
+        const emp = await pb.collection('empresas').getOne(empresaId)
+        setESetor(emp.setor ?? '')
+        setEPorte(emp.porte ?? '')
+      } catch (_) {
+        // sem acesso à empresa — edita só o lead
+      }
+    }
+    setEditando(true)
+  }
+
+  const salvarEdicao = async () => {
+    if (!id || !lead) return
+    setSalvandoEdicao(true)
+    setErro('')
+    try {
+      await updateLead(id, {
+        nome_empresa: eNome.trim() || lead.nome_empresa,
+        segmento: eSegmento.trim() || undefined,
+        uf: eUf.trim() || undefined,
+        cidade: eCidade.trim() || undefined,
+        contato_nome: eContatoNome.trim() || undefined,
+        contato_email: eContatoEmail.trim() || undefined,
+        contato_telefone: eContatoTel.trim() || undefined,
+        observacoes: eObs,
+      })
+      if (eEmpresaId) {
+        await pb.collection('empresas').update(eEmpresaId, {
+          setor: eSetor.trim() || undefined,
+          porte: ePorte.trim() || undefined,
+        })
+      }
+      setNotice('Lead atualizado.')
+      setEditando(false)
+      await loadAll()
+      await carregarHistorico()
+    } catch (e) {
+      setErro('Falha ao salvar: ' + String((e as Error).message ?? e))
+    } finally {
+      setSalvandoEdicao(false)
+    }
+  }
+
   const calcularPontuacao = async (produtoId: string) => {
     if (!id) return
     setScoreLoading(produtoId)
@@ -1033,6 +1107,97 @@ export default function LeadDetail() {
                 </div>
               )
             })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Task edição (16/10/2026): seção Editar — admin tudo; vendedor só o dele */}
+      {lead && !editando && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Dados do lead</CardTitle>
+            <CardDescription>
+              Edite as informações do lead. A etapa muda pelo fluxo do funil — não aqui.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" size="sm" onClick={() => void abrirEdicao()}>
+              Editar lead
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      {editando && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Editar lead</CardTitle>
+            <CardDescription>
+              A etapa do funil não entra aqui — muda pelos botões do fluxo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Empresa (nome no lead)</Label>
+                <Input value={eNome} onChange={(ev) => setENome(ev.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Segmento</Label>
+                <Input value={eSegmento} onChange={(ev) => setESegmento(ev.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>UF</Label>
+                <Input value={eUf} onChange={(ev) => setEUf(ev.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Cidade</Label>
+                <Input value={eCidade} onChange={(ev) => setECidade(ev.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Contato — nome</Label>
+                <Input value={eContatoNome} onChange={(ev) => setEContatoNome(ev.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Contato — e-mail</Label>
+                <Input
+                  type="email"
+                  value={eContatoEmail}
+                  onChange={(ev) => setEContatoEmail(ev.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Contato — telefone</Label>
+                <Input value={eContatoTel} onChange={(ev) => setEContatoTel(ev.target.value)} />
+              </div>
+              {eEmpresaId && (
+                <>
+                  <div className="space-y-1">
+                    <Label>Setor (empresa)</Label>
+                    <Input value={eSetor} onChange={(ev) => setESetor(ev.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Porte (empresa)</Label>
+                    <Input value={ePorte} onChange={(ev) => setEPorte(ev.target.value)} />
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label>Observações</Label>
+              <Textarea value={eObs} onChange={(ev) => setEObs(ev.target.value)} />
+            </div>
+            <div className="flex gap-2">
+              <Button disabled={salvandoEdicao} onClick={() => void salvarEdicao()}>
+                {salvandoEdicao ? 'Salvando…' : 'Salvar'}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={salvandoEdicao}
+                onClick={() => setEditando(false)}
+              >
+                Cancelar
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
