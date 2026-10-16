@@ -178,9 +178,9 @@ export default function LeadDetail() {
       if (eContatoNome.trim()) dados.contato_nome = eContatoNome.trim()
       if (eContatoEmail.trim()) dados.contato_email = eContatoEmail.trim()
       if (eContatoTel.trim()) dados.contato_telefone = eContatoTel.trim()
-      // fetch DIRETO com token — padrão provado (responde 200); a promise do SDK pendura
-      // no navegador (ver artifacts/diagnostico-edicao-lead.md)
-      const base = import.meta.env.VITE_POCKETBASE_URL
+      // fetch DIRETO na MESMA ORIGEM da página (produção .goskip.app é navegável do
+      // navegador; o host interno shrd00 não é — era a causa do travamento).
+      const base = window.location.origin
       const token = pb.authStore.token
       const patchDireto = async (path: string, corpo: Record<string, unknown>) => {
         const r = await fetch(base + path, {
