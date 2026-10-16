@@ -204,6 +204,23 @@ routerAdd(
     if (!jobId || (acao !== 'executar' && acao !== 'reverter'))
       return e.badRequestError('jobId e acao (executar|reverter) são obrigatórios')
 
+    // hash determinístico dos dados (mesmo algoritmo do gerador/regua) — INLINE no callback
+    var hashDe = function (texto) {
+      var h1 = 0x811c9dc5
+      var h2 = 0x1000193
+      for (var i = 0; i < texto.length; i++) {
+        var c = texto.charCodeAt(i)
+        h1 = (h1 ^ c) >>> 0
+        h1 = Math.imul(h1, 0x01000193) >>> 0
+        h2 = (h2 + Math.imul(c, i + 1)) >>> 0
+      }
+      var saida = ''
+      for (var k = 0; k < 8; k++) {
+        saida += ((h1 ^ (h2 + k * 0x9e3779b9)) >>> 0).toString(16).padStart(8, '0')
+      }
+      return saida.substring(0, 64)
+    }
+
     let job
     try {
       job = $app.findRecordById('jobs_pontuacao', jobId)
