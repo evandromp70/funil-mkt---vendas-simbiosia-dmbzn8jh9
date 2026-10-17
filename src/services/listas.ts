@@ -72,6 +72,39 @@ export const vincularLead = (listaId: string, leadId: string, ambiente: Lista['a
 
 export const desvincular = (membroId: string) => pb.collection('lista_membros').delete(membroId)
 
+// contagem de membros por lista — UMA consulta; a RLS do backend filtra o que o
+// vendedor não é dono, então a contagem dele já sai correta
+export const getContagens = async (): Promise<Record<string, number>> => {
+  const membros = (await pb.collection('lista_membros').getFullList({
+    fields: 'id,lista',
+  })) as unknown as Array<{ id: string; lista: string }>
+  const contagem: Record<string, number> = {}
+  for (const m of membros) contagem[String(m.lista)] = (contagem[String(m.lista)] ?? 0) + 1
+  return contagem
+}
+
+export type NotaProduto = {
+  id: string
+  lead: string
+  produto: string
+  valor?: number
+  faixa?: string
+  status: 'calculada' | 'pendente' | 'eliminada'
+  created: string
+}
+
+// nota mais recente de cada lead para o produto (pontuacoes é append-only)
+export const getNotasProduto = async (produtoId: string): Promise<Map<string, NotaProduto>> => {
+  const linhas = (await pb.collection('pontuacoes').getFullList({
+    filter: pb.filter('produto = {:p}', { p: produtoId }),
+    sort: '-created',
+    fields: 'id,lead,produto,valor,faixa,status,created',
+  })) as unknown as NotaProduto[]
+  const porLead = new Map<string, NotaProduto>()
+  for (const n of linhas) if (!porLead.has(String(n.lead))) porLead.set(String(n.lead), n)
+  return porLead
+}
+
 // vínculo idempotente dos leads importados: cria vínculo para cada lead com
 // lista_origem = lista que ainda não tem vínculo vivo nesta lista
 export const vincularImportados = async (listaId: string, ambiente: Lista['ambiente']) => {

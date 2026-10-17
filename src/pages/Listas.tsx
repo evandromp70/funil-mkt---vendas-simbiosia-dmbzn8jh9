@@ -1,5 +1,6 @@
-// SPEC-1-006 (task 2e26d650): módulo de Listas no Funil — CA-1-006-01.
+// SPEC-1-006 (task 2e26d650 + bf09d372): módulo de Listas no Funil — CA-1-006-01/02.
 // Mesmo app, mesmo backend: lista → contato (LeadDetail, com notas por produto) → nota.
+// Filtros por coorte e produto-alvo; contagem de membros; nota do produto selecionado.
 // Filtro vazio = estado vazio com contagem zero. Desvincular não apaga lead.
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -10,10 +11,14 @@ import {
   vincularLead,
   desvincular,
   vincularImportados,
+  getNotasProduto,
+  getContagens,
   type Lista,
   type Membro,
+  type NotaProduto,
 } from '@/services/listas'
 import { getLeads } from '@/services/leads'
+import { getProdutos, type Produto } from '@/services/produtos'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -52,6 +57,11 @@ export default function Listas() {
   const [membros, setMembros] = useState<Membro[]>([])
   const [leads, setLeads] = useState<Array<{ id: string; nome_empresa: string }>>([])
   const [leadVincular, setLeadVincular] = useState('')
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [coorteFiltro, setCoorteFiltro] = useState('todas')
+  const [produtoFiltro, setProdutoFiltro] = useState('todos')
+  const [contagens, setContagens] = useState<Record<string, number>>({})
+  const [notas, setNotas] = useState<Map<string, NotaProduto>>(new Map())
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
   const [loading, setLoading] = useState(true)
@@ -187,7 +197,43 @@ export default function Listas() {
   }
   useEffect(() => {
     void carregarLeads()
+    void (async () => {
+      try {
+        setProdutos((await getProdutos()).filter((p) => p.ativo))
+      } catch (_) {
+        setProdutos([])
+      }
+    })()
+    void (async () => {
+      try {
+        setContagens(await getContagens())
+      } catch (_) {
+        setContagens({})
+      }
+    })()
   }, [])
+
+  useEffect(() => {
+    if (produtoFiltro === 'todos' || !produtoFiltro) {
+      setNotas(new Map())
+      return
+    }
+    void (async () => {
+      try {
+        setNotas(await getNotasProduto(produtoFiltro))
+      } catch (_) {
+        setNotas(new Map())
+      }
+    })()
+  }, [produtoFiltro])
+
+  const listasFiltradas = listas.filter((l) => {
+    const porCoorte = coorteFiltro === 'todas' || !coorteFiltro || l.coorte === coorteFiltro
+    const porProduto =
+      produtoFiltro === 'todos' || !produtoFiltro || l.produto_alvo === produtoFiltro
+    return porCoorte && porProduto
+  })
+  const produtoAtivo = produtos.find((p) => p.id === produtoFiltro)
 
   return (
     <div className="space-y-6">
@@ -197,6 +243,50 @@ export default function Listas() {
           ← Voltar aos leads
         </Link>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Filtros</CardTitle>
+          <CardDescription>
+            Coorte e produto-alvo filtram a tabela de listas; o produto selecionado mostra a nota de
+            cada membro da lista aberta.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <div className="space-y-1 min-w-[200px]">
+            <Label>Coorte</Label>
+            <Select value={coorteFiltro} onValueChange={setCoorteFiltro}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas as coortes</SelectItem>
+                {Object.entries(COORTE_LABEL).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1 min-w-[220px]">
+            <Label>Produto-alvo</Label>
+            <Select value={produtoFiltro} onValueChange={setProdutoFiltro}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os produtos</SelectItem>
+                {produtos.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {erro && (
         <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -211,90 +301,18 @@ export default function Listas() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Nova lista</CardTitle>
-          <CardDescription>
-            Mesmo app, mesmo cadastro: a lista é um vínculo com os leads, nunca uma cópia.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          <div className="space-y-1 lg:col-span-2">
-            <Label>Nome</Label>
-            <Input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex.: Fria — Vendas SP"
-            />
-          </div>
-          <div className="space-y-1 lg:col-span-2">
-            <Label>Descrição</Label>
-            <Input
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Opcional"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Coorte</Label>
-            <Select value={coorte} onValueChange={setCoorte}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(COORTE_LABEL).map(([v, l]) => (
-                  <SelectItem key={v} value={v}>
-                    {l}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Fonte</Label>
-            <Select value={fonte} onValueChange={(v) => setFonte(v as Lista['fonte'])}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(FONTE_LABEL).map(([v, l]) => (
-                  <SelectItem key={v} value={v}>
-                    {l}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Ambiente</Label>
-            <Select value={ambiente} onValueChange={(v) => setAmbiente(v as Lista['ambiente'])}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="teste">Teste</SelectItem>
-                <SelectItem value="producao">Produção</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end">
-            <Button
-              className="bg-[#10454f] hover:bg-[#0d3942]"
-              disabled={ocupado !== ''}
-              onClick={() => void onCriar()}
-            >
-              {ocupado === 'criar' ? 'Criando…' : 'Criar lista'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Listas ({listas.length})</CardTitle>
+          <CardTitle className="text-base">
+            Listas ({listasFiltradas.length} de {listas.length})
+          </CardTitle>
           <CardDescription>Clique para ver os membros e navegar até os contatos.</CardDescription>
         </CardHeader>
         <CardContent>
-          {listas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma lista ainda — 0 listas.</p>
+          {listasFiltradas.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {listas.length === 0
+                ? 'Nenhuma lista ainda — 0 listas.'
+                : 'Nenhuma lista no filtro — 0 listas.'}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -305,11 +323,12 @@ export default function Listas() {
                     <th className="py-2 pr-3">Fonte</th>
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pr-3">Ambiente</th>
+                    <th className="py-2 pr-3">Membros</th>
                     <th className="py-2 pr-3">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {listas.map((l) => (
+                  {listasFiltradas.map((l) => (
                     <tr key={l.id} className="border-b">
                       <td className="py-2 pr-3 font-medium">{l.nome}</td>
                       <td className="py-2 pr-3">
@@ -318,6 +337,7 @@ export default function Listas() {
                       <td className="py-2 pr-3">{FONTE_LABEL[l.fonte] ?? l.fonte}</td>
                       <td className="py-2 pr-3">{STATUS_LABEL[l.status] ?? l.status}</td>
                       <td className="py-2 pr-3">{l.ambiente === 'teste' ? 'Teste' : 'Produção'}</td>
+                      <td className="py-2 pr-3">{contagens[l.id] ?? 0}</td>
                       <td className="py-2 pr-3">
                         <Button variant="ghost" size="sm" onClick={() => void abrirLista(l)}>
                           {selecionada?.id === l.id ? 'Aberta' : 'Abrir'}
@@ -385,18 +405,25 @@ export default function Listas() {
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="py-2 pr-3">Lead</th>
                       <th className="py-2 pr-3">Vínculo</th>
+                      {produtoAtivo && <th className="py-2 pr-3">Nota — {produtoAtivo.nome}</th>}
                       <th className="py-2 pr-3">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {membros.map((m) => {
                       const lead = (m.expand?.lead ?? {}) as { id?: string; nome_empresa?: string }
+                      const nota = notas.get(String(lead.id ?? m.lead))
                       return (
                         <tr key={m.id} className="border-b">
                           <td className="py-2 pr-3">{lead.nome_empresa ?? m.lead}</td>
                           <td className="py-2 pr-3 text-muted-foreground">
                             {m.origem_importacao ? 'Importação' : 'Manual'}
                           </td>
+                          {produtoAtivo && (
+                            <td className="py-2 pr-3">
+                              {nota ? `${nota.valor ?? '—'} (${nota.faixa ?? '—'})` : '—'}
+                            </td>
+                          )}
                           <td className="py-2 pr-3">
                             <div className="flex gap-1">
                               {lead.id && (
