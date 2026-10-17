@@ -12,6 +12,7 @@ import Painel from './pages/Painel'
 import Cadastro from './pages/Cadastro'
 import Importar from './pages/Importar'
 import Produtos from './pages/Produtos'
+import Listas from './pages/Listas'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -86,6 +87,14 @@ const App = () => (
               element={
                 <Protected>
                   <Produtos />
+                </Protected>
+              }
+            />
+            <Route
+              path="/listas"
+              element={
+                <Protected>
+                  <Listas />
                 </Protected>
               }
             />

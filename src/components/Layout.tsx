@@ -38,6 +38,9 @@ export default function Layout() {
                 <Link to="/importar" className="hover:text-[#10454f]">
                   Importar
                 </Link>
+                <Link to="/listas" className="hover:text-[#10454f]">
+                  Listas
+                </Link>
                 <Link to="/produtos" className="hover:text-[#10454f]">
                   Produtos
                 </Link>
