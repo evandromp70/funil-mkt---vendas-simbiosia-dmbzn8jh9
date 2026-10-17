@@ -58,12 +58,12 @@ migrate(
     app.save(listas)
 
     // backfill das listas legadas (idempotente: só preenche o que está vazio)
-    const antigas = $app.findRecordsByFilter('listas', 'fonte = "" || ambiente = ""', '', 0, 0)
+    const antigas = app.findRecordsByFilter('listas', 'fonte = "" || ambiente = ""', '', 0, 0)
     for (const l of antigas) {
       if (!l.getString('fonte')) l.set('fonte', 'legado')
       if (!l.getString('ambiente')) l.set('ambiente', 'producao')
       if (!l.getString('status')) l.set('status', 'rascunho')
-      $app.save(l)
+      app.save(l)
     }
 
     // lista_membros: desvincular vira ação de admin (deleteRule era null/superuser)
