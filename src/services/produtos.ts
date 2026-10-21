@@ -23,6 +23,7 @@ export type Produto = {
   tom?: string
   ativo: boolean
   ambiente: 'teste' | 'producao'
+  sync_global_id?: string
   created?: string
   updated?: string
 }

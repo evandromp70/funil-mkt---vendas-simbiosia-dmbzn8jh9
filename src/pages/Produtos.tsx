@@ -423,7 +423,17 @@ export default function Produtos() {
     }
   }
 
+  // SPEC-1-007 (0cda0d05): produto PROJETADO da Fábrica não é editável aqui —
+  // a autoridade do catálogo é a Fábrica; aqui é leitura.
   const editar = (p: Produto) => {
+    if (p.sync_global_id) {
+      setErro('')
+      setAviso('')
+      setErro(
+        'Este produto é uma projeção da Fábrica — a edição é feita lá. Aqui o catálogo é somente leitura.',
+      )
+      return
+    }
     setEditandoId(p.id)
     setErros({})
     setErro('')
@@ -1002,23 +1012,35 @@ export default function Produtos() {
                     </td>
                     <td className="py-1 pr-2">
                       <div className="flex gap-1">
-                        <Button variant="outline" size="sm" onClick={() => editar(p)}>
-                          Editar
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => void abrirEntrevista(p)}>
-                          Entrevista
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => void abrirRegua(p)}>
-                          Régua
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={processando}
-                          onClick={() => void alternarAtivo(p.id, !p.ativo).then(carregar)}
-                        >
-                          {p.ativo ? 'Inativar' : 'Ativar'}
-                        </Button>
+                        {p.sync_global_id ? (
+                          <Badge variant="secondary" title="Projetado da Fábrica — somente leitura">
+                            Projetado da Fábrica
+                          </Badge>
+                        ) : (
+                          <Button variant="outline" size="sm" onClick={() => editar(p)}>
+                            Editar
+                          </Button>
+                        )}
+                        {!p.sync_global_id && (
+                          <Button variant="ghost" size="sm" onClick={() => void abrirEntrevista(p)}>
+                            Entrevista
+                          </Button>
+                        )}
+                        {!p.sync_global_id && (
+                          <Button variant="ghost" size="sm" onClick={() => void abrirRegua(p)}>
+                            Régua
+                          </Button>
+                        )}
+                        {!p.sync_global_id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={processando}
+                            onClick={() => void alternarAtivo(p.id, !p.ativo).then(carregar)}
+                          >
+                            {p.ativo ? 'Inativar' : 'Ativar'}
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
