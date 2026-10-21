@@ -285,30 +285,130 @@ routerAdd(
     )
     $app.save(recibo)
 
-    // PROJEÇÃO LOCAL no Funil: cadastro_upsert cria/atualiza a EMPRESA do cadastro único
+    // PROJEÇÃO LOCAL no Funil (task 0cda0d05 — CA-1-007-02): cadastro_upsert
+    // (empresa/pessoa), catalogo_aprovado (produto em leitura) e pontuacao_snapshot
+    // (nota LITERAL do payload, sem recalcular). Autoridade: o Funil não edita régua
+    // nem recalcula nota projetada; score/qualificação manuais do lead não são tocados.
     let projecao = null
-    if (decisao.acao === 'aplicar' && evento.tipo_evento === 'cadastro_upsert') {
-      const p = evento.payload
-      const tipo = evento.entidade_global_id.split(':')[2]
-      if (tipo === 'empresa') {
-        let alvo = null
+    if (decisao.acao === 'aplicar') {
+      const p = evento.payload || {}
+      const tipo = (evento.entidade_global_id || '').split(':')[2]
+      const ambienteLocal = evento.ambiente === 'real' ? 'producao' : 'teste'
+      const donoLocal = mapeado ? mapeado.getString('usuario_local_destino') : auth.id
+      const acharProjetado = (colecao, gid) => {
         try {
-          const ants = $app.findRecordsByFilter('empresas', 'sync_global_id = {:g}', '', 1, 0, {
-            g: evento.entidade_global_id,
+          const ants = $app.findRecordsByFilter(colecao, 'sync_global_id = {:g}', '', 1, 0, {
+            g: gid,
           })
-          alvo = ants.length > 0 ? ants[0] : null
-        } catch (_) {}
+          return ants.length > 0 ? ants[0] : null
+        } catch (_) {
+          return null
+        }
+      }
+
+      if (evento.tipo_evento === 'cadastro_upsert' && tipo === 'empresa') {
+        let alvo = acharProjetado('empresas', evento.entidade_global_id)
         if (!alvo) {
           const cCol = $app.findCollectionByNameOrId('empresas')
           alvo = new Record(cCol)
           alvo.set('sync_global_id', evento.entidade_global_id)
-          alvo.set('owner', mapeado ? mapeado.getString('usuario_local_destino') : auth.id)
-          alvo.set('ambiente', evento.ambiente === 'real' ? 'producao' : 'teste')
+          alvo.set('owner', donoLocal)
+          alvo.set('ambiente', ambienteLocal)
         }
         if (p.razao_social) alvo.set('razao_social', p.razao_social)
         if (p.cnpj) alvo.set('cnpj', p.cnpj)
         $app.save(alvo)
         projecao = alvo.id
+      }
+
+      if (evento.tipo_evento === 'cadastro_upsert' && tipo === 'pessoa') {
+        let alvo = acharProjetado('pessoas', evento.entidade_global_id)
+        if (!alvo) {
+          const cCol = $app.findCollectionByNameOrId('pessoas')
+          alvo = new Record(cCol)
+          alvo.set('sync_global_id', evento.entidade_global_id)
+          alvo.set('nome', p.nome || 'Pessoa projetada')
+          alvo.set('ambiente', ambienteLocal)
+        }
+        if (p.nome) alvo.set('nome', p.nome)
+        if (p.email) alvo.set('email_norm', p.email)
+        if (p.telefone) alvo.set('telefone_norm', p.telefone)
+        if (p.linkedin) alvo.set('linkedin_norm', p.linkedin)
+        if (p.relacionamento_conhecido === true) alvo.set('relacionamento_conhecido', true)
+        $app.save(alvo)
+        projecao = alvo.id
+      }
+
+      if (evento.tipo_evento === 'catalogo_aprovado' && tipo === 'produto') {
+        let alvo = acharProjetado('produtos', evento.entidade_global_id)
+        if (!alvo) {
+          const cCol = $app.findCollectionByNameOrId('produtos')
+          alvo = new Record(cCol)
+          alvo.set('sync_global_id', evento.entidade_global_id)
+          alvo.set('nome', p.nome || 'Produto projetado')
+          alvo.set('degrau', p.degrau || 'essencial')
+          alvo.set('ambiente', ambienteLocal)
+        }
+        // produto projetado fica INATIVO (leitura; catálogo é editável só na Fábrica)
+        alvo.set('ativo', false)
+        if (p.area) alvo.set('area', p.area)
+        if (p.dor) alvo.set('dor', p.dor)
+        if (p.descricao) alvo.set('descricao', p.descricao)
+        $app.save(alvo)
+        projecao = alvo.id
+      }
+
+      if (evento.tipo_evento === 'pontuacao_snapshot') {
+        // referências: lead (contexto) e produto projetados — sem elas, pendente
+        const contextoGid = p.contexto_global_id || evento.entidade_global_id
+        const produtoGid = p.produto_global_id || ''
+        let leadRec = null
+        try {
+          const leads = $app.findRecordsByFilter(
+            'leads',
+            'nome_empresa = {:n} && ambiente = {:a}',
+            '',
+            1,
+            0,
+            { n: contextoGid, a: ambienteLocal },
+          )
+          if (leads.length > 0) leadRec = leads[0]
+        } catch (_) {}
+        const prodRec = acharProjetado('produtos', produtoGid)
+        if (!leadRec || !prodRec) {
+          recibo.set('estado', 'pendente')
+          recibo.set(
+            'resultado',
+            JSON.stringify({
+              decisao: { acao: 'pendente', motivo: 'referências ainda não projetadas' },
+              mapeado: mapeado ? mapeado.id : null,
+            }),
+          )
+          $app.save(recibo)
+          return e.json(200, {
+            acao: 'pendente',
+            motivo: 'referências ainda não projetadas',
+            recibo: recibo.id,
+            projecao: null,
+          })
+        }
+        // snapshot LITERAL do payload (pontuacoes é append-only: novo registro)
+        const cCol = $app.findCollectionByNameOrId('pontuacoes')
+        const nota = new Record(cCol)
+        nota.set('owner', donoLocal)
+        nota.set('lead', leadRec.id)
+        nota.set('produto', prodRec.id)
+        nota.set('versao', evento.revisao)
+        nota.set('dados_hash', p.dados_hash || evento.payload_hash)
+        nota.set('status', p.status || 'calculada')
+        if (typeof p.valor === 'number') nota.set('valor', p.valor)
+        if (p.faixa) nota.set('faixa', p.faixa)
+        if (p.motivos) nota.set('motivos', JSON.stringify(p.motivos))
+        if (p.fontes) nota.set('fontes', JSON.stringify(p.fontes))
+        nota.set('ambiente', ambienteLocal)
+        nota.set('sync_global_id', evento.entidade_global_id)
+        $app.save(nota)
+        projecao = nota.id
       }
     }
 
