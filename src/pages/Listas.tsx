@@ -288,6 +288,84 @@ export default function Listas() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Nova lista</CardTitle>
+          <CardDescription>
+            Mesmo app, mesmo cadastro: a lista é um vínculo com os leads, nunca uma cópia.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="space-y-1 lg:col-span-2">
+            <Label>Nome</Label>
+            <Input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex.: Fria — Vendas SP"
+            />
+          </div>
+          <div className="space-y-1 lg:col-span-2">
+            <Label>Descrição</Label>
+            <Input
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Opcional"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Coorte</Label>
+            <Select value={coorte} onValueChange={setCoorte}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(COORTE_LABEL).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Fonte</Label>
+            <Select value={fonte} onValueChange={(v) => setFonte(v as Lista['fonte'])}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(FONTE_LABEL).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Ambiente</Label>
+            <Select value={ambiente} onValueChange={(v) => setAmbiente(v as Lista['ambiente'])}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="teste">Teste</SelectItem>
+                <SelectItem value="producao">Produção</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end">
+            <Button
+              className="bg-[#10454f] hover:bg-[#0d3942]"
+              disabled={ocupado !== ''}
+              onClick={() => void onCriar()}
+            >
+              {ocupado === 'criar' ? 'Criando…' : 'Criar lista'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {erro && (
         <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {erro}
