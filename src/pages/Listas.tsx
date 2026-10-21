@@ -19,6 +19,7 @@ import {
 } from '@/services/listas'
 import { getLeads } from '@/services/leads'
 import { getProdutos, type Produto } from '@/services/produtos'
+import pb from '@/lib/pocketbase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -140,6 +141,19 @@ export default function Listas() {
     setOcupado('vincular')
     setErro('')
     try {
+      // duplicata: o backend recusa com mensagem amigável; a checagem prévia evita a viagem
+      const existentes = await pb.collection('lista_membros').getFullList({
+        filter: pb.filter('lista = {:l} && lead = {:d}', {
+          l: selecionada.id,
+          d: leadVincular,
+        }),
+        fields: 'id',
+      })
+      if (existentes.length > 0) {
+        setErro('Este lead já está na lista.')
+        setOcupado('')
+        return
+      }
       await vincularLead(selecionada.id, leadVincular, selecionada.ambiente)
       setLeadVincular('')
       await abrirLista(selecionada)
