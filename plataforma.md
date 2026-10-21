@@ -3,9 +3,10 @@
 - plataforma: Skip
 - projeto_id: 50182
 - url_producao: https://funil-mkt-vendas-simbiosia-aa6fd.goskip.app
-- versao_aplicada: f581d6f (v0.0.34, conferida em 14/10/2026)
-- versao_publicada: f581d6f em 2026-10-14T20:49:34Z
-- ultima_task: d3e7d6da (aguardando teste humano)
+- url_preview: https://funil-mkt-vendas-simbiosia-aa6fd--preview.goskip.app
+- versao_aplicada: a0a7c0a (v0.0.106, conferida em 21/10/2026)
+- versao_publicada: a0a7c0a em 2026-10-21T19:44:00Z
+- ultima_task: 199009b0 CONTRATO-V1 (fechada com aceite 21/10/2026)
 - espelho: `codigo/` guarda a última versão de cada arquivo alterado pelas tasks. É cópia de
   consulta; a fonte executável é o Skip. Nunca edite o espelho para mudar o sistema.
 
@@ -13,8 +14,8 @@
 
 | Data | Task | Versão publicada | Arquivos alterados |
 |---|---|---|---|
-| 14/10/2026 | d3e7d6da | f581d6f | migrações 0010/0011 (ACL); dono do lead pai nos 3 hooks; testes ACL-NEGATIVA |
-| 14/10/2026 | 490ec843 (ajustes 1-3) | a0ac0e2 | gate de UI nos botões de IA (aviso visível, w-full, gap-y) |
-| 14/10/2026 | 490ec843 | 2fce7e3 | sistema.ts (recursoHabilitado); LeadDetail.tsx (gate de UI); testes SEM-EXTERNO; recarga dos hooks |
-| 14/10/2026 | 20c86bd2 (correção) | 47d5170 | migrações 0008/0009 separadas; bool/number sem required; recarga dos hooks |
-| 14/10/2026 | 20c86bd2 | 88790b4 | migração 0008; 3 hooks instrumentados; sistema.ts; Index.tsx; package.json (test real); scripts/tests de prova |
+| 15/10/2026 | 3b93879f | 2ccd3a4 (v0.0.69) | motor scoring-core; gerador; migração 0022; hook calcular; seção no LeadDetail |
+| 16/10/2026 | edicao-lead | 96994d7 (v0.0.80) | migrações 0024/0025; hook cadastro_editar; seção Editar no LeadDetail |
+| 15/10/2026 | 77a1aa6e | 5eb62a2 (v0.0.72) | migração 0023 (pontuacoes append-only); histórico por produto no LeadDetail |
+| 15/10/2026 | 3b93879f corr. 1 | 0986c2f (v0.0.70) | Produtos.tsx: aprovar régua = create rascunho + update aprovada |
+| 21/10/2026 | 199009b0 | a0a7c0a (v0.0.106) | migrações 0028/0029; hook sync_aplicar (projeção de empresa + reavaliação de recibo pendente) |
