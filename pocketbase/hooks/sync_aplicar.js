@@ -1,4 +1,5 @@
 // SPEC-1-007 (task 199009b0): rota de aplicar fixture do contrato v1 — CA-1-007-01.
+// v0.0.104: recarga do hook (lição: hooks podem ficar desatualizados na instância).
 // Adaptador de demonstração: SÓ admin autorizado, SÓ ambiente teste.
 // Fonte pura do contrato embutida DENTRO do callback (VM própria do PocketBase —
 // declarações top-level não são visíveis nos callbacks). Recibo no sync_inbox na
