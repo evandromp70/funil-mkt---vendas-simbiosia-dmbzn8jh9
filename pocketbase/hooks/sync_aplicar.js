@@ -364,14 +364,10 @@ routerAdd(
         const produtoGid = p.produto_global_id || ''
         let leadRec = null
         try {
-          const leads = $app.findRecordsByFilter(
-            'leads',
-            'nome_empresa = {:n} && ambiente = {:a}',
-            '',
-            1,
-            0,
-            { n: contextoGid, a: ambienteLocal },
-          )
+          // leads não tem campo ambiente — contexto é identificado pelo nome_empresa (gid)
+          const leads = $app.findRecordsByFilter('leads', 'nome_empresa = {:n}', '', 1, 0, {
+            n: contextoGid,
+          })
           if (leads.length > 0) leadRec = leads[0]
         } catch (_) {}
         const prodRec = acharProjetado('produtos', produtoGid)
