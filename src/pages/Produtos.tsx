@@ -1014,7 +1014,7 @@ export default function Produtos() {
                       <div className="flex gap-1">
                         {p.sync_global_id ? (
                           <Badge variant="secondary" title="Projetado da Fábrica — somente leitura">
-                            Projetado da Fábrica
+                            Projetado da Fábrica · somente leitura
                           </Badge>
                         ) : (
                           <Button variant="outline" size="sm" onClick={() => editar(p)}>
