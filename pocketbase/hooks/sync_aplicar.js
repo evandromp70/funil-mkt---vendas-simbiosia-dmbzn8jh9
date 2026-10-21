@@ -199,7 +199,9 @@ routerAdd(
     // ==== lógica da rota ====
     const auth = e.auth
     if (!auth) return e.unauthorizedError('Autenticação necessária')
-    if (auth.role !== 'admin') return e.forbiddenError('Só admin aplica fixtures do contrato')
+    // role via getString — no JSVM o Record não expõe campos como propriedade direta
+    if (auth.getString('role') !== 'admin')
+      return e.forbiddenError('Só admin aplica fixtures do contrato')
 
     const body = e.requestInfo().body || {}
     const evento = body.evento || null
