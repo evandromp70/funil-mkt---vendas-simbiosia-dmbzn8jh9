@@ -236,9 +236,18 @@ routerAdd(
         { e: evento.evento_id, o: evento.origem, a: evento.ambiente },
       )
       if (existentes.length > 0) {
-        estadoAtual = {
-          hash: existentes[0].getString('payload_hash'),
-          revisao: existentes[0].getInt('revisao'),
+        // SPEC (fluxo 3): recibo pendente/rejeitado/atrasado é REAVALIADO com o mesmo
+        // evento_id — só recibo aplicado/duplicado/conflito trava a redecisão.
+        const estadoAnterior = existentes[0].getString('estado')
+        if (
+          estadoAnterior === 'aplicado' ||
+          estadoAnterior === 'duplicado' ||
+          estadoAnterior === 'conflito'
+        ) {
+          estadoAtual = {
+            hash: existentes[0].getString('payload_hash'),
+            revisao: existentes[0].getInt('revisao'),
+          }
         }
       }
     } catch (_) {}
