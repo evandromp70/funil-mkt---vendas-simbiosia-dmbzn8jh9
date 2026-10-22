@@ -1,7 +1,7 @@
 // HOOK TEMPORÁRIO de limpeza pós-SPEC-1-007 — remover após uso.
 // POST /backend/v1/admin/limpar-fixtures — só admin; apaga resíduo de fixtures/demo.
-// Preserva: sistema_config, metas. Apaga: todo dado de negócio (100% sintético em 22/10/2026).
-// Modo 'relatorio' só conta; modo 'executar' apaga em lotes de 500.
+// Preserva: users, sistema_config, metas. Apaga: todo dado de negócio (100% sintético em 22/10/2026).
+// v2: modo relatorio conta em UMA busca (limit 10000) — loop anterior era infinito sem delete.
 routerAdd(
   'POST',
   '/backend/v1/admin/limpar-fixtures',
@@ -11,7 +11,7 @@ routerAdd(
     if (auth.getString('role') !== 'admin') return e.forbiddenError('Só admin executa limpeza')
 
     const body = e.requestInfo().body || {}
-    const modo = body.modo || 'relatorio' // 'relatorio' | 'executar'
+    const modo = body.modo || 'relatorio'
 
     // detecção do app por coleção exclusiva (Funil tem 'leads')
     var alvo = []
@@ -62,18 +62,19 @@ routerAdd(
     for (const col of alvo) {
       let n = 0
       try {
-        while (true) {
-          const lote = $app.findRecordsByFilter(col, '', '', 500, 0)
-          if (lote.length === 0) break
-          if (modo === 'executar') {
+        if (modo === 'executar') {
+          var seg = 0
+          while (true) {
+            const lote = $app.findRecordsByFilter(col, '', '', 500, 0)
+            if (lote.length === 0) break
             for (const r of lote) {
               $app.delete(r)
               n++
             }
-          } else {
-            n += lote.length
+            if (++seg > 40) break
           }
-          if (lote.length < 500) break
+        } else {
+          n = $app.findRecordsByFilter(col, '', '', 10000, 0).length
         }
       } catch (err) {
         relatorio[col] = 'ERRO: ' + err.message
