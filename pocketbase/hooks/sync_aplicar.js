@@ -227,26 +227,59 @@ routerAdd(
 
     let estadoAtual = null
     try {
-      const existentes = $app.findRecordsByFilter(
+      // SPEC (fluxo 3 + acc7d79f): a comparação de revisão é por CHAVE DE NEGÓCIO
+      // (ambiente, origem/autoridade, dominio, entidade[, produto]) — não só por
+      // evento_id. Pego o recibo de maior revisão dessa chave.
+      const chaveEnt =
+        evento.entidade_global_id || (evento.payload && evento.payload.solicitacao_id) || ''
+      const chaveProd = (evento.payload && evento.payload.produto_global_id) || ''
+      const candidatos = $app.findRecordsByFilter(
         'sync_inbox',
-        'evento_id = {:e} && origem = {:o} && ambiente = {:a}',
-        '',
+        'origem = {:o} && ambiente = {:a} && dominio = {:d} && entidade_global_id = {:e}',
+        '-revisao',
         1,
         0,
-        { e: evento.evento_id, o: evento.origem, a: evento.ambiente },
+        { o: evento.origem, a: evento.ambiente, d: evento.dominio, e: chaveEnt },
       )
-      if (existentes.length > 0) {
-        // SPEC (fluxo 3): recibo pendente/rejeitado/atrasado é REAVALIADO com o mesmo
-        // evento_id — só recibo aplicado/duplicado/conflito trava a redecisão.
-        const estadoAnterior = existentes[0].getString('estado')
+      // recibo do MESMO evento_id (para duplicado/conflito terminal)
+      const mesmos = candidatos.filter((r) => r.getString('evento_id') === evento.evento_id)
+      const porChave = candidatos.length > 0 ? candidatos[0] : null
+      const porEvento = mesmos.length > 0 ? mesmos[0] : null
+      // duplicado/conflito só contra o MESMO evento_id
+      if (porEvento) {
+        const estadoAnterior = porEvento.getString('estado')
         if (
           estadoAnterior === 'aplicado' ||
           estadoAnterior === 'duplicado' ||
           estadoAnterior === 'conflito'
         ) {
-          estadoAtual = {
-            hash: existentes[0].getString('payload_hash'),
-            revisao: existentes[0].getInt('revisao'),
+          const hashIgual = porEvento.getString('payload_hash') === evento.payload_hash
+          const revIgual = porEvento.getInt('revisao') === evento.revisao
+          if (hashIgual && revIgual) {
+            estadoAtual = {
+              hash: porEvento.getString('payload_hash'),
+              revisao: porEvento.getInt('revisao'),
+            }
+          } else if (!hashIgual && revIgual) {
+            estadoAtual = {
+              hash: 'X' + porEvento.getString('payload_hash'),
+              revisao: porEvento.getInt('revisao'),
+            }
+          }
+        }
+      }
+      // atraso/conflito de revisão contra a CHAVE de negócio (maior revisão aplicada)
+      if (!estadoAtual && porChave) {
+        const estadoAnterior = porChave.getString('estado')
+        if (estadoAnterior === 'aplicado') {
+          const revChave = porChave.getInt('revisao')
+          if (evento.revisao < revChave) {
+            estadoAtual = { hash: porChave.getString('payload_hash'), revisao: revChave }
+          } else if (
+            evento.revisao === revChave &&
+            porChave.getString('payload_hash') !== evento.payload_hash
+          ) {
+            estadoAtual = { hash: 'X' + porChave.getString('payload_hash'), revisao: revChave }
           }
         }
       }
