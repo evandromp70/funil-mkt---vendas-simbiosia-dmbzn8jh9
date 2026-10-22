@@ -269,10 +269,11 @@ routerAdd(
           }
         }
       }
-      // atraso/conflito de revisão contra a CHAVE de negócio (maior revisão aplicada)
+      // atraso/conflito de revisão contra a CHAVE de negócio (maior revisão aplicada;
+      // 'duplicado' também conta — a projeção da chave existe)
       if (!estadoAtual && porChave) {
         const estadoAnterior = porChave.getString('estado')
-        if (estadoAnterior === 'aplicado') {
+        if (estadoAnterior === 'aplicado' || estadoAnterior === 'duplicado') {
           const revChave = porChave.getInt('revisao')
           if (evento.revisao < revChave) {
             estadoAtual = { hash: porChave.getString('payload_hash'), revisao: revChave }
