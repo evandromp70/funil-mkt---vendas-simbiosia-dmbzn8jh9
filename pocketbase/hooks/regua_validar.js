@@ -335,6 +335,8 @@ onRecordUpdate((e) => {
 
 onRecordDelete((e) => {
   const rec = e.record
+  // limpeza pós-SPEC-1-007: em ambiente teste, fixtures podem ser apagadas
+  if (rec.getString('ambiente') === 'teste') return e.next()
   if (rec.getString('status') !== 'rascunho')
     throw new BadRequestError(
       'Só rascunho pode ser apagado — versões aprovadas/arquivadas permanecem no histórico.',

@@ -1,7 +1,7 @@
 // HOOK TEMPORÁRIO de limpeza pós-SPEC-1-007 — remover após uso.
 // POST /backend/v1/admin/limpar-fixtures — só admin; apaga resíduo de fixtures/demo.
 // Preserva: users, sistema_config, metas. Apaga: todo dado de negócio (100% sintético em 22/10/2026).
-// v2: modo relatorio conta em UMA busca (limit 10000) — loop anterior era infinito sem delete.
+// v3: ordem filhos→pais (referências) para esvaziar em 1 passada.
 routerAdd(
   'POST',
   '/backend/v1/admin/limpar-fixtures',
@@ -13,49 +13,33 @@ routerAdd(
     const body = e.requestInfo().body || {}
     const modo = body.modo || 'relatorio'
 
-    // detecção do app por coleção exclusiva (Funil tem 'leads')
-    var alvo = []
-    try {
-      $app.findCollectionByNameOrId('leads')
-      alvo = [
-        'empresas',
-        'pessoas',
-        'pessoas_origens',
-        'bloqueios_contato',
-        'conflitos_cadastro',
-        'fusoes_cadastro',
-        'produtos',
-        'entrevista_produtos',
-        'regras_produto',
-        'pontuacoes',
-        'jobs_pontuacao',
-        'sync_inbox',
-        'sync_mapeamentos',
-        'aliases_identidade',
-        'leads',
-        'qualificacoes',
-        'contatos',
-        'cadencias',
-        'alinhamentos',
-        'listas',
-        'lista_membros',
-        'importacoes',
-        'importacao_linhas',
-        'teste_despachos',
-      ]
-    } catch (_) {
-      alvo = [
-        'empresas',
-        'listas',
-        'importacoes',
-        'sync_inbox',
-        'sync_mapeamentos',
-        'aliases_identidade',
-        'comercial_projetado',
-        'teste_despachos',
-        'regras_icp',
-      ]
-    }
+    // Funil: filhos antes de pais (pessoas_origens→pessoas; entrevista_produtos/regras→produtos)
+    const alvo = [
+      'pessoas_origens',
+      'entrevista_produtos',
+      'regras_produto',
+      'qualificacoes',
+      'contatos',
+      'cadencias',
+      'alinhamentos',
+      'lista_membros',
+      'importacao_linhas',
+      'jobs_pontuacao',
+      'pontuacoes',
+      'bloqueios_contato',
+      'conflitos_cadastro',
+      'fusoes_cadastro',
+      'sync_inbox',
+      'sync_mapeamentos',
+      'aliases_identidade',
+      'teste_despachos',
+      'leads',
+      'pessoas',
+      'produtos',
+      'empresas',
+      'importacoes',
+      'listas',
+    ]
 
     const relatorio = {}
     let total = 0
