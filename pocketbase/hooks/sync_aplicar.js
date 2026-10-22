@@ -238,11 +238,10 @@ routerAdd(
         'sync_inbox',
         'origem = {:o} && ambiente = {:a} && dominio = {:d} && entidade_global_id = {:e}',
         '-revisao',
-        1,
+        0,
         0,
         { o: evento.origem, a: evento.ambiente, d: evento.dominio, e: chaveEnt },
-      )
-      // recibo do MESMO evento_id (para duplicado/conflito terminal)
+      ) // recibo do MESMO evento_id (para duplicado/conflito terminal)
       const mesmos = candidatos.filter((r) => r.getString('evento_id') === evento.evento_id)
       const porChave = candidatos.length > 0 ? candidatos[0] : null
       const porEvento = mesmos.length > 0 ? mesmos[0] : null
