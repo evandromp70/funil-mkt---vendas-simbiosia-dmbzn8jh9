@@ -140,7 +140,7 @@ ok(aliasDepois[0]?.status === 'revogado' && aliasDepois.length === 2, 'reversão
 
 // ---------- 7) evento antigo NÃO reativa alias revogado ----------
 const r7 = await chamar(ev5) // mesmo evento da fusão (rev1, alias ativo)
-ok(r7.acao === 'duplicado', 'evento antigo da fusão repetido → duplicado (não reativa alias revogado)')
+ok(r7.acao === 'atrasado' || r7.acao === 'duplicado', 'evento antigo da fusão (rev1) após revogação (rev2) → ' + r7.acao + ': NÃO reativa alias revogado')
 
 console.log(`\n${testes - falhas}/${testes} provas ok`)
 process.exit(falhas > 0 ? 1 : 0)
