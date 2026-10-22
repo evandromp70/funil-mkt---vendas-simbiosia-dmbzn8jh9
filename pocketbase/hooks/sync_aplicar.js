@@ -358,6 +358,69 @@ routerAdd(
         projecao = alvo.id
       }
 
+      if (
+        evento.tipo_evento === 'identidade_alias' ||
+        evento.tipo_evento === 'identidade_revogacao'
+      ) {
+        // FUSÃO REVERSÍVEL (SPEC fluxo 6): alias na Fábrica, pausa de cadências no Funil.
+        const p2 = p
+        const origemGid = p2.origem_global || ''
+        const destinoGid = p2.destino_global || ''
+        const statusAlias = evento.tipo_evento === 'identidade_alias' ? 'ativo' : 'revogado'
+        // grava o alias local (espelho do contrato; fonte de verdade é a Fábrica)
+        try {
+          const aCol = $app.findCollectionByNameOrId('aliases_identidade')
+          const existentes = $app.findRecordsByFilter(
+            'aliases_identidade',
+            'origem_global = {:o} && rev = {:r}',
+            '',
+            1,
+            0,
+            { o: origemGid, r: evento.revisao },
+          )
+          const alias = existentes.length > 0 ? existentes[0] : new Record(aCol)
+          alias.set('origem_global', origemGid)
+          alias.set('destino_global', destinoGid)
+          alias.set('rev', evento.revisao)
+          alias.set('status', statusAlias)
+          $app.save(alias)
+          projecao = alias.id
+        } catch (errAlias) {
+          return e.json(200, {
+            acao: 'conflito',
+            motivo: 'falha ao gravar alias: ' + String(errAlias),
+            recibo: recibo.id,
+            projecao: null,
+          })
+        }
+        // PAUSA de cadências dos DOIS contextos (conflito de identidade/atribuição) —
+        // humano decide a continuidade; reversão mantém a pausa até revisão comercial.
+        if (statusAlias === 'ativo' || statusAlias === 'revogado') {
+          try {
+            const leadsA = $app.findRecordsByFilter('leads', 'nome_empresa = {:n}', '', 0, 0, {
+              n: origemGid,
+            })
+            const leadsB = $app.findRecordsByFilter('leads', 'nome_empresa = {:n}', '', 0, 0, {
+              n: destinoGid,
+            })
+            for (const l of [...leadsA, ...leadsB]) {
+              const cads = $app.findRecordsByFilter(
+                'cadencias',
+                'lead = {:l} && status = {:s}',
+                '',
+                0,
+                0,
+                { l: l.id, s: 'agendado' },
+              )
+              for (const c of cads) {
+                c.set('status', 'cancelado')
+                $app.save(c)
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
       if (evento.tipo_evento === 'pontuacao_snapshot') {
         // referências: lead (contexto) e produto projetados — sem elas, pendente
         const contextoGid = p.contexto_global_id || evento.entidade_global_id
