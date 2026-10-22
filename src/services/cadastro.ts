@@ -65,6 +65,13 @@ export const getPessoas = async (): Promise<Pessoa[]> => {
 export const criarPessoa = (dados: Partial<Pessoa>): Promise<Pessoa> =>
   pb.collection('pessoas').create<Pessoa>({ ...dados, ambiente: 'teste' })
 
+// pendência pós-fase (22/10/2026): criar lead a partir da pessoa do cadastro
+export const gerarLeadDeCadastro = (pessoaId: string, empresaId: string | null) =>
+  pb.send('/backend/v1/cadastro/gerar-lead', {
+    method: 'POST',
+    body: { pessoaId, empresaId },
+  })
+
 // vincula empresa/pessoa a um lead (migração manual rastreável — backfill do legado)
 export const vincularLeadCadastro = (
   leadId: string,

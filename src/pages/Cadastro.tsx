@@ -6,6 +6,7 @@ import {
   criarEmpresa,
   getPessoas,
   criarPessoa,
+  gerarLeadDeCadastro,
   normalizarEmail,
   normalizarTelefone,
   normalizarLinkedin,
@@ -46,6 +47,7 @@ export default function Cadastro() {
   const [origensPorPessoa, setOrigensPorPessoa] = useState<Record<string, OrigemPessoa[]>>({})
   const [fusaoOrigem, setFusaoOrigem] = useState('')
   const [fusaoDestino, setFusaoDestino] = useState('')
+  const [empresaLead, setEmpresaLead] = useState<Record<string, string>>({})
   const [bloqueiosPorPessoa, setBloqueiosPorPessoa] = useState<Record<string, BloqueioPessoa[]>>({})
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
@@ -146,6 +148,25 @@ export default function Cadastro() {
       await carregar()
     } catch (e) {
       setErro('Erro ao cadastrar pessoa: ' + String(e))
+    }
+  }
+
+  const gerarLead = async (pessoaId: string) => {
+    setErro('')
+    setAviso('')
+    try {
+      const r = (await gerarLeadDeCadastro(pessoaId, empresaLead[pessoaId] || null)) as {
+        acao: string
+        leadId: string
+      }
+      setAviso(
+        r.acao === 'criado'
+          ? 'Lead criado a partir do cadastro (etapa: lista).'
+          : 'Esta pessoa já tem um lead ativo — nada foi duplicado.',
+      )
+      await carregar()
+    } catch (e) {
+      setErro('Erro ao gerar lead: ' + String(e))
     }
   }
 
@@ -312,6 +333,26 @@ export default function Cadastro() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Select
+                          value={empresaLead[p.id] ?? ''}
+                          onValueChange={(v) => setEmpresaLead((m) => ({ ...m, [p.id]: v }))}
+                        >
+                          <SelectTrigger className="h-8 w-[170px]">
+                            <SelectValue placeholder="Empresa do lead" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {empresas.map((em) => (
+                              <SelectItem key={em.id} value={em.id}>
+                                {em.razao_social}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {eleg.status !== 'bloqueada' && (
+                          <Button size="sm" onClick={() => gerarLead(p.id)}>
+                            Gerar lead
+                          </Button>
+                        )}
                         <span className="text-xs text-muted-foreground">{rotulo}</span>
                         {eleg.status !== 'bloqueada' && (
                           <Button
