@@ -486,7 +486,36 @@ routerAdd(
             projecao: null,
           })
         }
-        // snapshot LITERAL do payload (pontuacoes é append-only: novo registro)
+        // snapshot LITERAL do payload — IDEMPOTENTE por chave de negócio (SPEC):
+        // mesma nota (lead+produto+versão+dados_hash) já projetada retorna a existente
+        let existente = null
+        try {
+          const ants = $app.findRecordsByFilter(
+            'pontuacoes',
+            'lead = {:l} && produto = {:p} && versao = {:v} && dados_hash = {:h}',
+            '',
+            1,
+            0,
+            {
+              l: leadRec.id,
+              p: prodRec.id,
+              v: evento.revisao,
+              h: p.dados_hash || evento.payload_hash,
+            },
+          )
+          if (ants.length > 0) existente = ants[0]
+        } catch (_) {}
+        if (existente) {
+          projecao = existente.id
+          return e.json(200, {
+            acao: 'aplicar',
+            motivo: null,
+            recibo: recibo.id,
+            projecao: projecao,
+            idempotente: true,
+          })
+        }
+        // pontuacoes é append-only: novo registro, nunca atualiza anterior
         const cCol = $app.findCollectionByNameOrId('pontuacoes')
         const nota = new Record(cCol)
         nota.set('owner', donoLocal)
