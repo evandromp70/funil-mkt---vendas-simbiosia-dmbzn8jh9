@@ -8,6 +8,7 @@ export type Lead = {
   contato_email?: string
   contato_telefone?: string
   origem: 'inbound' | 'outbound'
+  migracao_origem_id?: string
   etapa:
     | 'lista'
     | 'qualificacao'

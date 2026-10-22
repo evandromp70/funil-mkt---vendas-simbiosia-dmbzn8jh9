@@ -564,6 +564,11 @@ export default function Index() {
                         {ETAPA_LABEL[lead.etapa] ?? lead.etapa}
                       </Badge>
                       {lead.score != null && <Badge variant="outline">Score {lead.score}</Badge>}
+                      {String(lead.migracao_origem_id || '').startsWith('cadastro:') && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Do cadastro
+                        </Badge>
+                      )}
                       {lead.lista_origem && (
                         <Badge variant="outline" className="text-[10px]">
                           {lead.lista_origem}
