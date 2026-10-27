@@ -1,6 +1,7 @@
 // SPEC-1-005 (task 3b93879f): persistência da pontuação por produto — CA-1-005-01/02.
-// Migração ADITIVA: pontuacoes (idempotente por lead×produto×versao×dados_hash; snapshot
-// anterior preservado) + primeira_abordagem_em em leads. Nada legado é alterado.
+// Migração ADITIVA: pontuacoes (idempotente por lead×produto×versao×dados_hash) +
+// primeira_abordagem_em em leads. Nada legado é alterado.
+// F2-T01: recuperada do Skip 50182 (fonte executável).
 migrate(
   (app) => {
     const regraAdmin = "@request.auth.id != '' && @request.auth.role = 'admin'"
@@ -17,7 +18,13 @@ migrate(
         updateRule: regraAdmin,
         deleteRule: null,
         fields: [
-          { name: 'owner', type: 'relation', required: true, collectionId: '_pb_users_auth_', maxSelect: 1 },
+          {
+            name: 'owner',
+            type: 'relation',
+            required: true,
+            collectionId: '_pb_users_auth_',
+            maxSelect: 1,
+          },
           {
             name: 'lead',
             type: 'relation',
@@ -63,7 +70,6 @@ migrate(
       app.save(c)
     }
 
-    // leads: primeira_abordagem_em (opcional; presença de contato outbound também marca)
     const leads = app.findCollectionByNameOrId('leads')
     if (!leads.fields.some((f) => f.name === 'primeira_abordagem_em')) {
       leads.fields.add(new DateField({ name: 'primeira_abordagem_em' }))
