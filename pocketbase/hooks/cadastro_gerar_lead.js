@@ -3,6 +3,7 @@
 // Idempotente: pessoa com lead ativo (etapa != perdido) NÃO gera segundo lead.
 // Proteção: pessoa com pedido de saída (bloqueio global) não vira lead.
 // Rastro: migracao_origem_id = 'cadastro:<pessoaId>'.
+// F2-T01: recarga da instancia (2026-10-27).
 routerAdd(
   'POST',
   '/backend/v1/cadastro/gerar-lead',
