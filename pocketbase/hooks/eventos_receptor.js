@@ -206,7 +206,9 @@ routerAdd(
             cadenciasPausadas++
           }
         } catch (errP) {
-          $app.logger().warn('evento: falha ao pausar cadências', 'err', String(errP))
+          // NUNCA engolir: se a pausa falhar, o chamador e o log têm de saber
+          efeitos.erro_pausar_cadencia = String(errP)
+          $app.logger().error('evento: falha ao pausar cadências', 'err', String(errP))
         }
 
         // 2. toques pendentes da pessoa → cancelados (nenhum toque sai depois da resposta)
