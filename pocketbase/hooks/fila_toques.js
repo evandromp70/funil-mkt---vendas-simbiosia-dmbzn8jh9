@@ -265,9 +265,11 @@ routerAdd(
           $app.save(s)
           return { ok: true, slot: slot }
         } catch (errSlot) {
-          const m = String(errSlot)
-          if (m.indexOf('UNIQUE') !== -1 || m.indexOf('unique') !== -1) continue
-          return { ok: false, motivo: 'erro_slot' }
+          // Qualquer falha ao CRIAR o slot significa que este índice não é nosso:
+          // ou porque já existe (corrida) ou porque a gravação foi recusada. Em ambos os
+          // casos o certo é tentar o próximo índice — nunca abortar com erro genérico,
+          // que viraria um falso "erro" no lugar de "limite atingido".
+          continue
         }
       }
       return { ok: false, motivo: 'limite_atingido' }
