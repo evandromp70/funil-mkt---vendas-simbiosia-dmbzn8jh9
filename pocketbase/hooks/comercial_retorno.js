@@ -130,9 +130,12 @@ routerAdd(
     const query = e.requestInfo().query || {}
     const pessoaIdFiltro = String(query.pessoaId || '')
 
+    // ATENÇÃO: `leads` NÃO tem campo `ambiente` (o ambiente é da pessoa/empresa). Filtrar por
+    // ele derrubava a rota com 500 — "unknown field ambiente". Aqui não há filtro de ambiente:
+    // o escopo TESTE vem da pessoa, verificada evento a evento.
     let leads = []
     try {
-      leads = $app.findRecordsByFilter('leads', "ambiente = 'teste'", '-created', 500, 0, {})
+      leads = $app.findRecordsByFilter('leads', "id != ''", '-created', 500, 0, {})
     } catch (err) {
       return e.internalServerError('Falha ao ler leads: ' + String(err))
     }
