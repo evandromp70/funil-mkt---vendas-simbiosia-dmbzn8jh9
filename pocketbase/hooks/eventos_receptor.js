@@ -534,7 +534,17 @@ routerAdd(
         reciboId: reg.id,
         payloadHash: hash,
         classificacao: classificacao || null,
-        efeitos: efeitos.resposta || null,
+        // devolve o que quer que tenha acontecido: pausa (resposta) e/ou saída (bloqueio).
+        // Antes só `efeitos.resposta` era exposto, então uma SAÍDA — que é efeito de bloqueio,
+        // não de pausa — respondia `efeitos: null` mesmo tendo criado o bloqueio. O chamador
+        // ficava sem saber que a proteção foi aplicada.
+        efeitos:
+          efeitos.resposta || efeitos.saida
+            ? {
+                ...(efeitos.resposta || {}),
+                ...(efeitos.saida ? { saida: efeitos.saida } : {}),
+              }
+            : null,
         detalhe: 'Evento de teste registrado (nenhum despacho externo).',
       })
     } catch (err) {
