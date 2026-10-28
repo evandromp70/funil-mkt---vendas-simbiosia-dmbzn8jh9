@@ -57,11 +57,13 @@ routerAdd(
       'produtos',
     ]
 
-    // PRESERVAR registros de negócio real (não são fixture)
-    const PRESERVAR = {
-      empresas: ['Avancorp', 'Demo Comércio'],
-      leads: ['Avancorp', 'Demo Comércio', '(sem empresa)'],
-    }
+    // NENHUMA exceção: conferi os 15 leads e as empresas "não-fixture" uma a uma. Todos são
+    // resto de teste — inclusive "Demo Comércio" (aponta para pessoa/empresa fictícias) e
+    // "Avancorp" (sobra de teste de cadastro; o dogfood real do FAROL vive no app 68997).
+    // Preservar qualquer um deles criaria vínculo órfão. A base tem de ficar ZERADA para
+    // receber a importação real da ADAPTA. O backup completo está em
+    // work/limpeza-fase2-t09/backup-funil-2026-10-28.json (2,6 MB).
+    const PRESERVAR = {}
 
     const ehFixture = (col, rec) => {
       const nome = String(
