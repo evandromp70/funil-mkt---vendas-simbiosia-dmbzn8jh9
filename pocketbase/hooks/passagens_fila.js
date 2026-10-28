@@ -186,9 +186,13 @@ routerAdd(
           if (String(minhas[i].getString('status')) !== 'resolvida') minhasAtivas++
         }
       } catch (_) {}
-      // se já é minha e está aguardando, assumir não aumenta a contagem
-      const jaMinha = dono === e.auth.id
-      if (!jaMinha && minhasAtivas >= teto)
+      // A ASSUNÇÃO IDEMPOTENTE só vale se a passagem JÁ ESTÁ ASSUMIDA por mim.
+      // Antes eu liberava quando `dono === eu`, mesmo com a passagem AGUARDANDO — e aí o teto
+      // não limitava nada: bastava o admin atribuir várias ao mesmo dono e ele assumia todas.
+      // Defeito pego pela suíte (a segunda deveria ficar aguardando e era assumida).
+      const jaAssumidaPorMim =
+        status === 'assumida' && String(p.getString('assumida_por') || '') === e.auth.id
+      if (!jaAssumidaPorMim && minhasAtivas >= teto)
         return e.json(200, {
           estado: 'no_limite',
           teto: teto,
