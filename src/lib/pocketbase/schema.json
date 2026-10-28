@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T16:09:18.384Z",
+  "generatedAt": "2026-10-28T18:31:04.418Z",
   "collections": [
     {
       "name": "users",
@@ -1961,6 +1961,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "ordem",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -3133,6 +3139,17 @@
             "onCreate",
             "onUpdate"
           ]
+        },
+        {
+          "name": "regra_prioridade_produto",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "produto_mais_recente",
+            "ordem_catalogo",
+            "manual"
+          ]
         }
       ],
       "indexes": [
@@ -3357,6 +3374,122 @@
       ],
       "indexes": [
         "CREATE INDEX idx_adaptador_tipo ON adaptadores_teste (tipo)"
+      ]
+    },
+    {
+      "name": "cadencias_ativas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "identidade_efetiva",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "pessoa",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "pessoas"
+        },
+        {
+          "name": "produto",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "produtos"
+        },
+        {
+          "name": "contexto",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "contextos_comerciais"
+        },
+        {
+          "name": "estado",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "ativa",
+            "concluida",
+            "cancelada",
+            "substituida"
+          ]
+        },
+        {
+          "name": "motivo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo_codigo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "politica_versao",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "substitui",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_cadencia_uma_ativa ON cadencias_ativas (identidade_efetiva) WHERE estado = 'ativa'",
+        "CREATE INDEX idx_cadencia_pessoa ON cadencias_ativas (pessoa)",
+        "CREATE INDEX idx_cadencia_produto ON cadencias_ativas (produto)"
       ]
     }
   ]
