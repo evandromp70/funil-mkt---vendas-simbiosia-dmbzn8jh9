@@ -80,7 +80,49 @@ routerAdd(
       } catch (_) {
         continue
       }
-      if (aprovadas.length === 0) continue
+      // Se não há nenhuma aprovada, procura a MELHOR arquivada com os valores canônicos e
+      // reativa. Sem este passo o restaurador apagava as de teste e deixava a coorte SEM
+      // política nenhuma — pior que o problema original, porque o avaliador passaria a
+      // responder "sem_politica_aprovada" para todo mundo (aconteceu em 28/10).
+      if (aprovadas.length === 0) {
+        let arquivadas = []
+        try {
+          arquivadas = $app.findRecordsByFilter(
+            'politicas_coorte',
+            "coorte = {:c} && ambiente = 'teste' && status = 'arquivada'",
+            '-versao',
+            50,
+            0,
+            { c: coorte },
+          )
+        } catch (_) {
+          continue
+        }
+        let candidata = null
+        for (let i = 0; i < arquivadas.length; i++) {
+          const p = arquivadas[i]
+          const bate =
+            String(p.getString('faixa_minima') || '') === CANONICO.faixa_minima &&
+            Number(p.get('nota_minima_piso') || 0) === CANONICO.nota_minima_piso &&
+            p.getString('janela_inicio') === CANONICO.janela_inicio &&
+            p.getString('janela_fim') === CANONICO.janela_fim &&
+            p.getInt('intervalo_min_minutos') === CANONICO.intervalo_min_minutos
+          if (bate) {
+            candidata = p
+            break
+          }
+        }
+        if (candidata) {
+          if (executar) {
+            candidata.set('status', 'aprovada')
+            $app.save(candidata)
+          }
+          acoes.push({ coorte: coorte, acao: 'reativada_canonica' })
+        } else {
+          acoes.push({ coorte: coorte, acao: 'sem_canonica_arquivada' })
+        }
+        continue
+      }
 
       let boa = null
       for (let i = 0; i < aprovadas.length; i++) {
