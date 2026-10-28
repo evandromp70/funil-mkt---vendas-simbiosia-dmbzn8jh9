@@ -37,13 +37,25 @@ routerAdd(
       return e.internalServerError('Falha ao ler a fila: ' + String(err))
     }
 
-    // TETO por dono: configuração em sistema_config; ausente → padrão conservador
-    let teto = 3
-    try {
-      const cfg = $app.findRecordsByFilter('sistema_config', "ambiente = 'teste'", '', 1, 0, {})
-      if (cfg.length > 0 && Number(cfg[0].get('teto_passagens_por_dono') || 0) > 0)
-        teto = Number(cfg[0].get('teto_passagens_por_dono'))
-    } catch (_) {}
+    // TETO: individual por pessoa (users.teto_passagens); quem não tem usa o padrão global.
+    // Decisão do José (28/10): 5 para ele, 1 para o Evandro (transbordo do processo).
+    const tetoDe = (usuarioId) => {
+      let padrao = 3
+      try {
+        const cfg = $app.findRecordsByFilter('sistema_config', "ambiente = 'teste'", '', 1, 0, {})
+        if (cfg.length > 0 && Number(cfg[0].get('teto_passagens_por_dono') || 0) > 0)
+          padrao = Number(cfg[0].get('teto_passagens_por_dono'))
+      } catch (_) {}
+      if (!usuarioId) return padrao
+      try {
+        const u = $app.findRecordById('users', usuarioId)
+        const proprio = Number(u.get('teto_passagens') || 0)
+        return proprio > 0 ? proprio : padrao
+      } catch (_) {
+        return padrao
+      }
+    }
+    let teto = tetoDe('') // padrão, usado no texto de cabeçalho
 
     // contagem de ativas por dono (aguardando + assumida)
     const ativasPorDono = {}
@@ -75,10 +87,10 @@ routerAdd(
       let excedente = false
       if (status === 'aguardando') {
         if (dono) {
-          excedente = ativasPorDono[dono] > teto
+          excedente = ativasPorDono[dono] > tetoDe(dono)
         } else {
           for (const k in ativasPorDono) {
-            if (ativasPorDono[k] > teto) {
+            if (ativasPorDono[k] > tetoDe(k)) {
               excedente = true
               break
             }
@@ -140,13 +152,25 @@ routerAdd(
     const status = String(p.getString('status'))
     if (status === 'resolvida') return e.badRequestError('Passagem já resolvida.')
 
-    // TETO: não assume além do teto (o excedente espera visível)
-    let teto = 3
-    try {
-      const cfg = $app.findRecordsByFilter('sistema_config', "ambiente = 'teste'", '', 1, 0, {})
-      if (cfg.length > 0 && Number(cfg[0].get('teto_passagens_por_dono') || 0) > 0)
-        teto = Number(cfg[0].get('teto_passagens_por_dono'))
-    } catch (_) {}
+    // TETO INDIVIDUAL: cada pessoa tem o seu (users.teto_passagens); sem próprio, usa o padrão.
+    // Decisão do José (28/10): 5 para ele, 1 para o Evandro (transbordo do processo).
+    const tetoDe = (usuarioId) => {
+      let padrao = 3
+      try {
+        const cfg = $app.findRecordsByFilter('sistema_config', "ambiente = 'teste'", '', 1, 0, {})
+        if (cfg.length > 0 && Number(cfg[0].get('teto_passagens_por_dono') || 0) > 0)
+          padrao = Number(cfg[0].get('teto_passagens_por_dono'))
+      } catch (_) {}
+      if (!usuarioId) return padrao
+      try {
+        const u = $app.findRecordById('users', usuarioId)
+        const proprio = Number(u.get('teto_passagens') || 0)
+        return proprio > 0 ? proprio : padrao
+      } catch (_) {
+        return padrao
+      }
+    }
+    const teto = tetoDe(e.auth.id)
     if (!souAdmin) {
       let minhasAtivas = 0
       try {

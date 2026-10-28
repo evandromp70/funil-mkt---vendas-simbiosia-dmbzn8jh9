@@ -357,8 +357,34 @@ routerAdd(
           )
           pass.set('motivo_codigo', 'resposta_recebida')
           pass.set('motivo', 'Resposta interrompeu a cadência e exige continuidade humana.')
-          // dono: NUNCA chutar sócio por fallback. Sem mapeamento → pendente de revisão.
-          pass.set('dono_pendente', true)
+          // DONO: usa o responsável padrão CONFIGURADO (decisão do José, 28/10: ele mesmo por
+          // enquanto). Não é chute nem fallback: é configuração explícita em sistema_config.
+          // Sem configuração → pendente para revisão administrativa, como antes.
+          let donoPadrao = ''
+          try {
+            const cfgD = $app.findRecordsByFilter(
+              'sistema_config',
+              "ambiente = 'teste'",
+              '',
+              1,
+              0,
+              {},
+            )
+            if (cfgD.length > 0)
+              donoPadrao = String(cfgD[0].getString('dono_padrao_passagem') || '')
+          } catch (_) {}
+          if (donoPadrao) {
+            try {
+              $app.findRecordById('users', donoPadrao)
+              pass.set('dono', donoPadrao)
+              pass.set('dono_pendente', false)
+            } catch (_) {
+              // configuração aponta para usuário inexistente: não inventa, fica pendente
+              pass.set('dono_pendente', true)
+            }
+          } else {
+            pass.set('dono_pendente', true)
+          }
           pass.set('owner', e.auth.id)
           pass.set('ambiente', 'teste')
           $app.save(pass)
