@@ -176,6 +176,13 @@ routerAdd(
 
       const efeitos = { tipo: tipo, canal: canal, efeito: 'registrado' }
 
+      // O EVENTO PRECISA EXISTIR ANTES das relações que apontam para ele.
+      // Causa raiz de um defeito real (28/10): `pausa.set('evento', reg.id)` era chamado antes
+      // deste save, então reg.id estava VAZIO, a relação obrigatória falhava e o catch de baixo
+      // interpretava a falha como "já existe" — a pausa nunca era criada e ninguém percebia,
+      // porque o erro era engolido. Salvar aqui resolve; o resultado é gravado no fim.
+      $app.save(reg)
+
       // pausa + passagem única — SÓ para resposta sem pedido de saída.
       // 'saida' é da F2-T10 (bloqueio global); desinteresse simples NÃO vira opt-out.
       const PAUSA = ['pergunta', 'conversa', 'desinteresse']
@@ -267,8 +274,10 @@ routerAdd(
           $app.save(pausa)
           pausaId = pausa.id
         } catch (errPausa) {
-          // já existe pausa ativa para a pessoa: a proteção é a MESMA, não é erro
-          pausaEstado = 'ja_ativa'
+          // Trata os dois casos DIFERENTES: (a) já existe pausa ativa → a proteção é a mesma,
+          // não é erro; (b) qualquer outra falha → NÃO pode passar como "ja_ativa", senão a
+          // pausa não acontece e o chamador acha que aconteceu. Foi exatamente esse mascaramento
+          // que escondeu o bug da relação vazia em 28/10.
           try {
             const existentes = $app.findRecordsByFilter(
               'pausas_resposta',
@@ -278,8 +287,18 @@ routerAdd(
               0,
               { p: pessoaId },
             )
-            if (existentes.length > 0) pausaId = existentes[0].id
-          } catch (_) {}
+            if (existentes.length > 0) {
+              pausaEstado = 'ja_ativa'
+              pausaId = existentes[0].id
+            } else {
+              pausaEstado = 'erro'
+              efeitos.pausa_erro = String(errPausa)
+              $app.logger().error('evento: falha ao criar pausa', 'err', String(errPausa))
+            }
+          } catch (_) {
+            pausaEstado = 'erro'
+            efeitos.pausa_erro = String(errPausa)
+          }
         }
 
         // 5. PASSAGEM ÚNICA (índice único por evento) — o mesmo evento nunca duplica
