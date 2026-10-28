@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T15:56:17.443Z",
+  "generatedAt": "2026-10-28T16:09:18.384Z",
   "collections": [
     {
       "name": "users",
@@ -3138,6 +3138,225 @@
       "indexes": [
         "CREATE UNIQUE INDEX idx_politica_versao ON politicas_coorte (coorte, versao, ambiente)",
         "CREATE UNIQUE INDEX idx_politica_aprovada ON politicas_coorte (coorte, ambiente) WHERE status = 'aprovada'"
+      ]
+    },
+    {
+      "name": "eventos_teste",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "evento_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "correlation_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste"
+          ]
+        },
+        {
+          "name": "fonte",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "fixture"
+          ]
+        },
+        {
+          "name": "tipo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ocorrido_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "canal",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "email",
+            "whatsapp",
+            "linkedin",
+            "telefone",
+            "interno"
+          ]
+        },
+        {
+          "name": "pessoa",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "pessoas"
+        },
+        {
+          "name": "identidade_ref",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payload_hash",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "aplicado",
+            "duplicado",
+            "conflito",
+            "rejeitado",
+            "pendente"
+          ]
+        },
+        {
+          "name": "resultado",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_evento_teste_id ON eventos_teste (evento_id, ambiente)",
+        "CREATE INDEX idx_evento_teste_corr ON eventos_teste (correlation_id)"
+      ]
+    },
+    {
+      "name": "adaptadores_teste",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "captacao",
+            "enriquecimento",
+            "canal"
+          ]
+        },
+        {
+          "name": "entrada",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resposta",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "modo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "simulado"
+          ]
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste"
+          ]
+        },
+        {
+          "name": "ator",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_adaptador_tipo ON adaptadores_teste (tipo)"
       ]
     }
   ]

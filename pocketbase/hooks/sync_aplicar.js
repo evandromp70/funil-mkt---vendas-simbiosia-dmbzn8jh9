@@ -105,6 +105,11 @@ routerAdd(
         return { ok: false, motivo: 'origem inválida' }
       if (AMBIENTES_VALIDOS.indexOf(evento.ambiente) === -1)
         return { ok: false, motivo: 'ambiente inválido' }
+      // SPEC-2-003 (F2-T07): modo REAL é recusado nesta fase. Antes o adaptador aceitava
+      // 'real' e mapeava para 'producao' — abria caminho para projeção fora do ambiente de
+      // teste. A Fase 2 é só TESTE: fechar a porta aqui, sem tocar em autoridade/hash.
+      if (evento.ambiente === 'real')
+        return { ok: false, motivo: 'ambiente real recusado nesta fase (apenas teste)' }
       if (typeof evento.tipo_evento !== 'string' || AUTORIDADE[evento.tipo_evento] === undefined)
         return { ok: false, motivo: 'tipo_evento inválido' }
       if (AUTORIDADE[evento.tipo_evento] !== evento.origem)
