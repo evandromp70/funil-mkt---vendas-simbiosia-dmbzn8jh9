@@ -190,20 +190,33 @@ routerAdd(
         // 1. cadências ativas da pessoa em QUALQUER produto/canal → pausada
         let cadenciasPausadas = 0
         try {
-          const ativas = $app.findRecordsByFilter(
+          // Busca AMPLA por pessoa e filtro em JS. O filtro com três condições (pessoa +
+          // ambiente + estado) não retornava nada dentro do hook embora a mesma query
+          // funcionasse pelo SDK — em vez de investigar a diferença, filtro em memória:
+          // é determinístico e não depende da tradução do filtro no servidor.
+          const daPessoa = $app.findRecordsByFilter(
             'cadencias_ativas',
-            "pessoa = {:p} && ambiente = 'teste' && estado = 'ativa'",
+            'pessoa = {:p}',
             '',
-            200,
+            500,
             0,
             { p: pessoaId },
           )
-          for (let i = 0; i < ativas.length; i++) {
-            ativas[i].set('estado', 'pausada')
-            ativas[i].set('motivo_codigo', 'resposta_recebida')
-            ativas[i].set('motivo', 'Resposta (' + classificacao + ') interrompeu a cadência.')
-            $app.save(ativas[i])
-            cadenciasPausadas++
+          efeitos.cadencias_encontradas = daPessoa.length
+          for (let i = 0; i < daPessoa.length; i++) {
+            const cad = daPessoa[i]
+            if (String(cad.getString('estado')) !== 'ativa') continue
+            if (String(cad.getString('ambiente')) !== 'teste') continue
+            try {
+              cad.set('estado', 'pausada')
+              cad.set('motivo_codigo', 'resposta_recebida')
+              cad.set('motivo', 'Resposta (' + classificacao + ') interrompeu a cadência.')
+              $app.save(cad)
+              cadenciasPausadas++
+            } catch (errCad) {
+              efeitos.erro_pausar_cadencia = String(errCad)
+              $app.logger().error('evento: falha ao salvar cadência pausada', 'err', String(errCad))
+            }
           }
         } catch (errP) {
           // NUNCA engolir: se a pausa falhar, o chamador e o log têm de saber
