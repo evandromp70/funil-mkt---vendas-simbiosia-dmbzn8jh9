@@ -210,8 +210,21 @@ routerAdd(
         })
         if (ps.length > 0) {
           notaValor = Number(ps[0].get('valor') || 0)
+          // `faixa` é campo TEXTO com a letra ("A"), não objeto — ler só objeto deixava
+          // letraValor vazio e o agente nunca decidia por letra. Corrigido em 28/10.
           const fa = ps[0].get('faixa')
-          if (fa && typeof fa === 'object') letraValor = String(fa.letra || '')
+          if (typeof fa === 'string') {
+            const t = fa.trim()
+            if (t === 'A' || t === 'B' || t === 'C' || t === 'D') letraValor = t
+            else {
+              try {
+                const p = JSON.parse(t)
+                if (p && p.letra) letraValor = String(p.letra)
+              } catch (_) {}
+            }
+          } else if (fa && typeof fa === 'object' && fa.letra) {
+            letraValor = String(fa.letra)
+          }
         }
       } catch (_) {}
     }

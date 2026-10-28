@@ -1,22 +1,12 @@
-// SPEC-2-002 (F2-T03): avaliador de elegibilidade por coorte — CA-2-002-01.
+// SPEC-2-002 (F2-T03 + decisão do José 28/10): avaliador de elegibilidade por coorte.
 // POST /backend/v1/politica/avaliar { pessoaId, canal?, horaTeste? }
 //
-// Responde POR QUE a pessoa pode ou não receber toque agora. Nunca "sim" por omissão:
-// ausência de política aprovada = PENDENTE.
+// Ordem: pausa → bloqueio → coorte → conhecida/fria → política aprovada →
+//        aprovação por mensagem → janela → FAIXA MÍNIMA + PISO → elegível
 //
-// Ordem de avaliação (cada item deixa recibo em `detalhes`):
-//   1. pausa geral ligada            → nao_elegivel  (pausa_geral)
-//   2. pessoa bloqueada              → nao_elegivel  (bloqueio)
-//   3. sem coorte                    → pendente      (sem_coorte)
-//   4. conhecida em coorte fria      → nao_elegivel  (conhecida_nao_recebe_fria)
-//   5. sem política aprovada         → pendente      (sem_politica_aprovada / inbound_sem_politica)
-//   6. relacionamento/atendido       → pendente      (exige_aprovacao_mensagem)
-//   7. fora da janela de horário     → nao_elegivel  (fora_da_janela)
-//   8. nota abaixo do mínimo         → nao_elegivel  (nota_abaixo_minimo / sem_nota)
-//   9. senão                         → elegivel
-//
-// PROTEGIDO: pessoa conhecida NÃO recebe fria; outro decisor da mesma empresa NÃO herda
-// o relacionamento (a avaliação é por pessoaId, nunca por empresa).
+// PORTÃO POR LETRA (28/10): a LETRA carrega o julgamento da régua; o número solto não,
+// porque cada produto tem pesos próprios. Piso absoluto é a trava final.
+// Ausência de política aprovada = PENDENTE, nunca "sim".
 routerAdd(
   'POST',
   '/backend/v1/politica/avaliar',
@@ -50,8 +40,8 @@ routerAdd(
       })
     }
 
-    // ---- 1. pausa geral (fonte: sistema_config) ----
-    let pausaGeral = true // default seguro: sem configuração, assume pausa
+    // ---- 1. pausa geral ----
+    let pausaGeral = true
     try {
       const cfg = $app.findRecordsByFilter('sistema_config', 'ambiente = {:a}', '-created', 1, 0, {
         a: ambiente,
@@ -63,7 +53,7 @@ routerAdd(
     }
     detalhes.push({ motivo_codigo: 'pausa_geral_off', motivo: 'Pausa geral desligada.' })
 
-    // ---- 2. bloqueios da pessoa ----
+    // ---- 2. bloqueios ----
     let temBloqueio = false
     try {
       const bloqueios = $app.findRecordsByFilter(
@@ -76,7 +66,6 @@ routerAdd(
       )
       temBloqueio = bloqueios.length > 0
     } catch (_) {
-      // se não conseguir verificar bloqueio, NÃO libera (fail-safe)
       temBloqueio = true
     }
     if (temBloqueio) {
@@ -84,7 +73,7 @@ routerAdd(
     }
     detalhes.push({ motivo_codigo: 'sem_bloqueio', motivo: 'Sem bloqueio ativo.' })
 
-    // ---- 3. coorte da pessoa ----
+    // ---- 3. coorte ----
     let coorte = ''
     try {
       const origens = $app.findRecordsByFilter(
@@ -107,7 +96,6 @@ routerAdd(
     }
     detalhes.push({ motivo_codigo: 'coorte', motivo: 'Coorte da pessoa: ' + coorte + '.' })
 
-    // pessoa conhecida NUNCA recebe fria (proteção por pessoa, não por empresa)
     const conhecida = pessoa.getBool('relacionamento_conhecido')
     if (conhecida && coorte === 'fria') {
       return responder(
@@ -130,7 +118,6 @@ routerAdd(
       if (ap.length > 0) politica = ap[0]
     } catch (_) {}
 
-    // ---- 4/5. ausência de política = PENDENTE (nunca "pode") ----
     if (!politica) {
       if (coorte === 'inbound') {
         return responder(
@@ -150,7 +137,6 @@ routerAdd(
       motivo: 'Política v' + politica.getInt('versao') + ' aprovada para ' + coorte + '.',
     })
 
-    // coorte de relacionamento exige aprovação individual da mensagem
     if (politica.getBool('exige_aprovacao_mensagem')) {
       return responder(
         false,
@@ -178,7 +164,6 @@ routerAdd(
         agora =
           String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
       }
-      // hora fixa opcional no payload: o teste prova a janela sem depender do relógio real
       const horaAvaliada =
         body.horaTeste && HHMM.test(String(body.horaTeste)) ? String(body.horaTeste) : agora
 
@@ -199,10 +184,7 @@ routerAdd(
       })
     }
 
-    // ---- 7. elegibilidade por LETRA + piso absoluto (decisão do José, 28/10) ----
-    // A LETRA porta a cadência, não a nota solta: cada produto tem a sua régua e o mesmo
-    // número significa coisas diferentes; a letra carrega o julgamento da régua.
-    // Piso absoluto = trava final contra régua generosa demais.
+    // ---- 7. FAIXA MÍNIMA + PISO ABSOLUTO (decisão do José, 28/10) ----
     const faixaMinima = String(politica.getString('faixa_minima') || '').trim()
     const notaPiso = Number(politica.get('nota_minima_piso') || 0)
     const ORDEM_FAIXA = { A: 4, B: 3, C: 2, D: 1 }
@@ -221,8 +203,21 @@ routerAdd(
       )
       if (notas.length > 0) {
         nota = Number(notas[0].get('valor') || 0)
+        // `faixa` é campo TEXTO com a letra ("A"), não objeto. Ler só objeto fazia o
+        // portão cair sempre em sem_nota — bug corrigido em 28/10.
         const fa = notas[0].get('faixa')
-        if (fa && typeof fa === 'object') letra = String(fa.letra || '')
+        if (typeof fa === 'string') {
+          const t = fa.trim()
+          if (t === 'A' || t === 'B' || t === 'C' || t === 'D') letra = t
+          else {
+            try {
+              const p = JSON.parse(t)
+              if (p && p.letra) letra = String(p.letra)
+            } catch (_) {}
+          }
+        } else if (fa && typeof fa === 'object' && fa.letra) {
+          letra = String(fa.letra)
+        }
       }
     } catch (_) {}
 
@@ -253,24 +248,23 @@ routerAdd(
         motivo: 'Faixa ' + letra + ' >= ' + faixaMinima + ' (nota ' + nota + ')',
       })
     } else if (notaAntiga > 0) {
-      const notaMinima = notaAntiga
       if (nota === null) {
         return responder(
           false,
           'sem_nota',
-          'Política exige nota mínima ' + notaMinima + ' e a pessoa não tem nota calculada.',
+          'Política exige nota mínima ' + notaAntiga + ' e a pessoa não tem nota calculada.',
         )
       }
-      if (nota < notaMinima) {
+      if (nota < notaAntiga) {
         return responder(
           false,
           'nota_abaixo_minimo',
-          'Nota ' + nota + ' abaixo do mínimo ' + notaMinima + '.',
+          'Nota ' + nota + ' abaixo do mínimo ' + notaAntiga + '.',
         )
       }
       detalhes.push({
         motivo_codigo: 'nota_ok',
-        motivo: 'Nota ' + nota + ' >= ' + notaMinima + '.',
+        motivo: 'Nota ' + nota + ' >= ' + notaAntiga + '.',
       })
     }
 
