@@ -14,6 +14,7 @@ import Importar from './pages/Importar'
 import Produtos from './pages/Produtos'
 import Listas from './pages/Listas'
 import Aprovacoes from './pages/Aprovacoes'
+import Passagens from './pages/Passagens'
 import AgenteContexto from './pages/AgenteContexto'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -113,6 +114,14 @@ const App = () => (
               element={
                 <Protected>
                   <AgenteContexto />
+                </Protected>
+              }
+            />
+            <Route
+              path="/passagens"
+              element={
+                <Protected>
+                  <Passagens />
                 </Protected>
               }
             />
