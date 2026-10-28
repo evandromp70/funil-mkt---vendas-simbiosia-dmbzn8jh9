@@ -156,7 +156,7 @@ routerAdd(
         )
         if (pols.length > 0) {
           regra = String(pols[0].getString('regra_prioridade_produto') || '')
-          politicaVersao = pols[0].getNumber('versao') || 0
+          politicaVersao = Number(pols[0].get('versao') || 0)
         }
       } catch (_) {}
 

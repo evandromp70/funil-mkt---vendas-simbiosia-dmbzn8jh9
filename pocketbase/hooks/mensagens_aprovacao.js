@@ -61,7 +61,7 @@ routerAdd(
       )
       if (pols.length > 0) {
         exigeAprovacao = pols[0].getBool('exige_aprovacao_mensagem')
-        versaoConfig = pols[0].getNumber('versao') || 0
+        versaoConfig = Number(pols[0].get('versao') || 0)
       } else {
         exigeAprovacao = true
       }
@@ -283,7 +283,7 @@ routerAdd(
       ap.set('conteudo_hash', hashAtual)
       ap.set('canal', String(msg.getString('canal') || ''))
       ap.set('remetente', String(msg.getString('remetente') || ''))
-      ap.set('versao_config', msg.getNumber('versao_config') || 0)
+      ap.set('versao_config', Number(msg.get('versao_config') || 0))
       ap.set('estado', 'valida')
       ap.set('motivo_codigo', 'aprovada_pelo_socio')
       $app.save(ap)
@@ -303,7 +303,7 @@ routerAdd(
       })
     } catch (err) {
       $app.logger().error('falha ao aprovar', 'err', String(err))
-      return e.internalServerError('Não foi possível aprovar a mensagem: ' + String(err))
+      return e.internalServerError('Não foi possível aprovar a mensagem')
     }
   },
   $apis.requireAuth(),
