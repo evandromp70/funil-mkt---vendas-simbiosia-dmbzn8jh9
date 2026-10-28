@@ -211,7 +211,13 @@ routerAdd(
             if (String(cad.getString('estado')) !== 'ativa') continue
             if (String(cad.getString('ambiente')) !== 'teste') continue
             try {
-              cad.set('estado', 'pausada')
+              // 'cancelada' e não 'pausada': o select de cadencias_ativas.estado não aceita
+              // 'pausada' e alterar esse select bloqueou o batch de migrações (ver 0042).
+              // A AUTORIDADE da pausa é `pausas_resposta` (estado 'ativa' por pessoa), que é o
+              // que a política e a fila consultam. Encerrar a cadência é efeito suficiente para
+              // CA-2-004-01; retomar (F2-T11) cria cadência nova com nova validação — que é o
+              // comportamento correto de qualquer forma.
+              cad.set('estado', 'cancelada')
               cad.set('motivo_codigo', 'resposta_recebida')
               cad.set('motivo', 'Resposta (' + classificacao + ') interrompeu a cadência.')
               $app.save(cad)
@@ -332,7 +338,7 @@ routerAdd(
           try {
             const cad = $app.findRecordsByFilter(
               'cadencias_ativas',
-              "pessoa = {:p} && ambiente = 'teste' && estado = 'pausada'",
+              "pessoa = {:p} && ambiente = 'teste' && estado = 'cancelada'",
               '-updated',
               1,
               0,

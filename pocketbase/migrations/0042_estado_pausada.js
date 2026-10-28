@@ -1,48 +1,26 @@
-// CORREÇÃO da migração 0041 (28/10/2026): o valor 'pausada' NÃO entrou no select de
-// `cadencias_ativas.estado`.
+// NEUTRALIZADA (28/10/2026) — não altera schema. Existe só para desbloquear o batch de migrações.
 //
-// SINTOMA: `GoError: estado: Invalid value pausada.` — o save da cadência falhava, o catch
-// engolia, e o efeito era "cadencias_pausadas: 0". A feature parecia pronta e não pausava NADA.
+// O que tentei e por que desisti:
+//   0041 tentou adicionar 'pausada' ao select de `cadencias_ativas.estado` mutando `campo.values`
+//   → NÃO persistiu ("Invalid value pausada" no save da cadência).
+//   0042 tentou remover e recriar o campo → o runtime rejeitou (`Object has no member 'remove'`),
+//   e uma migração falhando bloqueia TODAS as seguintes.
 //
-// A 0041 tentou `campo.values = [...]` e salvar; não persistiu. Aqui a forma canônica:
-// remover o campo e recriá-lo com os cinco valores. Seguro porque `cadencias_ativas` está com
-// zero registros (base limpa em 28/10); com dados seria preciso migrar valores antes.
+// DECISÃO DE DESENHO (sem tocar schema): a autoridade da pausa é a coleção `pausas_resposta`
+// (estado 'ativa' por pessoa). A cadência passa a 'cancelada' com motivo_codigo
+// 'resposta_recebida' — parar a cadência é efeito suficiente para CA-2-004-01, e retomar (F2-T11)
+// cria cadência nova com validação, que é o comportamento correto de qualquer forma.
+//
+// Isso evita mexer no select de uma coleção que a Fase 2 inteira usa. Se um dia 'pausada' for
+// necessária como estado próprio, a alteração precisa ser feita com a coleção vazia e testada
+// isoladamente antes.
 migrate(
   (app) => {
-    const col = app.findCollectionByNameOrId('cadencias_ativas')
-    const campo = col.fields.find((f) => f.name === 'estado')
-
-    if (campo && (campo.values || []).indexOf('pausada') !== -1) {
-      console.log('0042: estado já aceita pausada — nada a fazer')
-      return
-    }
-
-    if (campo) col.fields.remove(campo.id || campo.name)
-    col.fields.add(
-      new SelectField({
-        name: 'estado',
-        required: true,
-        maxSelect: 1,
-        values: ['ativa', 'concluida', 'cancelada', 'substituida', 'pausada'],
-      }),
+    console.log(
+      '0042: neutralizada — a pausa vive em pausas_resposta, sem alterar cadencias_ativas',
     )
-    app.save(col)
-    console.log('0042: cadencias_ativas.estado agora aceita pausada')
   },
   (app) => {
-    try {
-      const col = app.findCollectionByNameOrId('cadencias_ativas')
-      const campo = col.fields.find((f) => f.name === 'estado')
-      if (campo) col.fields.remove(campo.id || campo.name)
-      col.fields.add(
-        new SelectField({
-          name: 'estado',
-          required: true,
-          maxSelect: 1,
-          values: ['ativa', 'concluida', 'cancelada', 'substituida'],
-        }),
-      )
-      app.save(col)
-    } catch (_) {}
+    // nada a reverter
   },
 )
