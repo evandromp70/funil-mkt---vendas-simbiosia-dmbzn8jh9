@@ -12,6 +12,7 @@
 //   6. efeito + recibo gravados juntos
 //
 // Lógica INLINE no callback (VM própria do Skip).
+// v2 — 28/10/2026: SPEC-2-004 (F2-T09) pausa por resposta + passagem única.
 routerAdd(
   'POST',
   '/backend/v1/eventos/teste',
