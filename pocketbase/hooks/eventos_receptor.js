@@ -190,6 +190,8 @@ routerAdd(
       if (pessoaId && PAUSA.indexOf(classificacao) !== -1) {
         // 1. cadências ativas da pessoa em QUALQUER produto/canal → pausada
         let cadenciasPausadas = 0
+        let diagnosticoCad = ''
+        let encontradasCad = -1
         try {
           // Busca AMPLA por pessoa e filtro em JS. O filtro com três condições (pessoa +
           // ambiente + estado) não retornava nada dentro do hook embora a mesma query
@@ -203,7 +205,7 @@ routerAdd(
             0,
             { p: pessoaId },
           )
-          efeitos.cadencias_encontradas = daPessoa.length
+          encontradasCad = daPessoa.length
           for (let i = 0; i < daPessoa.length; i++) {
             const cad = daPessoa[i]
             if (String(cad.getString('estado')) !== 'ativa') continue
@@ -215,13 +217,12 @@ routerAdd(
               $app.save(cad)
               cadenciasPausadas++
             } catch (errCad) {
-              efeitos.erro_pausar_cadencia = String(errCad)
+              diagnosticoCad = String(errCad)
               $app.logger().error('evento: falha ao salvar cadência pausada', 'err', String(errCad))
             }
           }
         } catch (errP) {
-          // NUNCA engolir: se a pausa falhar, o chamador e o log têm de saber
-          efeitos.erro_pausar_cadencia = String(errP)
+          diagnosticoCad = String(errP)
           $app.logger().error('evento: falha ao pausar cadências', 'err', String(errP))
         }
 
@@ -373,6 +374,8 @@ routerAdd(
 
         efeitos.resposta = {
           classificacao: classificacao,
+          cadencias_encontradas: encontradasCad,
+          erro_cadencia: diagnosticoCad,
           cadencias_pausadas: cadenciasPausadas,
           toques_cancelados: toquesCancelados,
           reservas_liberadas: reservasLiberadas,
