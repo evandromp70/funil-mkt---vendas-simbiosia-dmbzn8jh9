@@ -318,6 +318,62 @@ routerAdd(
       }
     } catch (_) {}
 
+    // 1.5 PAUSA POR RESPOSTA (SPEC-2-004 / F2-T09) — a pessoa respondeu: nada sai.
+    // Sem esta checagem a pausa existiria só no papel: o toque reservado antes da resposta
+    // seria confirmado normalmente e a promessa "resposta interrompe a cadência" seria falsa.
+    // Fica ANTES de tudo que pode enviar, e vale para qualquer cadência/produto/canal.
+    let pessoaDoToque = ''
+    try {
+      const leadDoToque = $app.findRecordById('leads', toque.getString('lead'))
+      pessoaDoToque = String(leadDoToque.getString('pessoa') || '')
+    } catch (_) {}
+    if (pessoaDoToque) {
+      try {
+        const pausas = $app.findRecordsByFilter(
+          'pausas_resposta',
+          "pessoa = {:p} && ambiente = 'teste' && estado = 'ativa'",
+          '',
+          1,
+          0,
+          { p: pessoaDoToque },
+        )
+        if (pausas.length > 0) {
+          toque.set('estado', 'cancelado')
+          toque.set('motivo_codigo', 'resposta_recebida')
+          toque.set('motivo', 'Pessoa respondeu: o toque foi cancelado antes do envio.')
+          $app.save(toque)
+          reserva.set('ativa', false)
+          reserva.set('estado', 'cancelada')
+          reserva.set('motivo_codigo', 'resposta_recebida')
+          $app.save(reserva)
+          return e.json(200, {
+            estado: 'cancelado_resposta',
+            motivo_codigo: 'resposta_recebida',
+            enviado: false,
+            detalhe:
+              'A pessoa respondeu (' +
+              pausas[0].getString('classificacao') +
+              '): o toque não foi enviado e a conversa está com o humano.',
+          })
+        }
+      } catch (errPausa) {
+        // se não conseguir verificar, NÃO envia (fail-safe): pausa ilegível não libera toque
+        toque.set('estado', 'pendente')
+        toque.set('motivo_codigo', 'pausa_indeterminada')
+        toque.set('motivo', 'Não foi possível verificar pausa de resposta: toque mantido na fila.')
+        $app.save(toque)
+        reserva.set('ativa', false)
+        reserva.set('estado', 'cancelada')
+        $app.save(reserva)
+        return e.json(200, {
+          estado: 'cancelado_pausa_indeterminada',
+          motivo_codigo: 'pausa_indeterminada',
+          enviado: false,
+          detalhe: 'Verificação de pausa falhou: por segurança o toque não foi confirmado.',
+        })
+      }
+    }
+
     // 2. cadência ainda ativa?
     const cadenciaId = String(toque.getString('cadencia') || '')
     if (cadenciaId) {

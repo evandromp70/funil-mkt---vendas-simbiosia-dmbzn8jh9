@@ -155,7 +155,198 @@ routerAdd(
       reg.set('payload_hash', hash)
       reg.set('estado', 'aplicado')
       reg.set('owner', e.auth.id)
-      reg.set('resultado', JSON.stringify({ tipo: tipo, canal: canal, efeito: 'registrado' }))
+
+      // ---- CLASSIFICAÇÃO DA RESPOSTA (SPEC-2-004 / F2-T09) ----
+      // Nesta fase a classificação vem de FIXTURE DETERMINÍSTICA: o payload traz o campo,
+      // não há inferência de LLM nem chamada externa. Aceita também o caminho payload.classificacao.
+      const CLASSIF = ['pergunta', 'conversa', 'desinteresse', 'saida']
+      let classificacao = ''
+      if (body.classificacao && CLASSIF.indexOf(String(body.classificacao)) !== -1)
+        classificacao = String(body.classificacao)
+      else if (
+        body.payload &&
+        typeof body.payload === 'object' &&
+        body.payload.classificacao &&
+        CLASSIF.indexOf(String(body.payload.classificacao)) !== -1
+      )
+        classificacao = String(body.payload.classificacao)
+      if (classificacao) reg.set('classificacao', classificacao)
+
+      const efeitos = { tipo: tipo, canal: canal, efeito: 'registrado' }
+
+      // pausa + passagem única — SÓ para resposta sem pedido de saída.
+      // 'saida' é da F2-T10 (bloqueio global); desinteresse simples NÃO vira opt-out.
+      const PAUSA = ['pergunta', 'conversa', 'desinteresse']
+      if (pessoaId && PAUSA.indexOf(classificacao) !== -1) {
+        // 1. cadências ativas da pessoa em QUALQUER produto/canal → pausada
+        let cadenciasPausadas = 0
+        try {
+          const ativas = $app.findRecordsByFilter(
+            'cadencias_ativas',
+            "pessoa = {:p} && ambiente = 'teste' && estado = 'ativa'",
+            '',
+            200,
+            0,
+            { p: pessoaId },
+          )
+          for (let i = 0; i < ativas.length; i++) {
+            ativas[i].set('estado', 'pausada')
+            ativas[i].set('motivo_codigo', 'resposta_recebida')
+            ativas[i].set('motivo', 'Resposta (' + classificacao + ') interrompeu a cadência.')
+            $app.save(ativas[i])
+            cadenciasPausadas++
+          }
+        } catch (errP) {
+          $app.logger().warn('evento: falha ao pausar cadências', 'err', String(errP))
+        }
+
+        // 2. toques pendentes da pessoa → cancelados (nenhum toque sai depois da resposta)
+        let toquesCancelados = 0
+        try {
+          const pendentes = $app.findRecordsByFilter(
+            'toques',
+            "ambiente = 'teste' && estado = 'pendente' && lead.pessoa = {:p}",
+            '',
+            500,
+            0,
+            { p: pessoaId },
+          )
+          for (let i = 0; i < pendentes.length; i++) {
+            pendentes[i].set('estado', 'cancelado')
+            pendentes[i].set('motivo_codigo', 'resposta_recebida')
+            pendentes[i].set('motivo', 'Resposta (' + classificacao + ') antes do toque.')
+            $app.save(pendentes[i])
+            toquesCancelados++
+          }
+        } catch (errT) {
+          $app.logger().warn('evento: falha ao cancelar toques', 'err', String(errT))
+        }
+
+        // 3. reservas ativas da pessoa → liberadas (lease não fica preso)
+        let reservasLiberadas = 0
+        try {
+          const reservas = $app.findRecordsByFilter(
+            'reservas',
+            "ambiente = 'teste' && ativa = true && toque.lead.pessoa = {:p}",
+            '',
+            200,
+            0,
+            { p: pessoaId },
+          )
+          for (let i = 0; i < reservas.length; i++) {
+            reservas[i].set('ativa', false)
+            reservas[i].set('estado', 'liberada')
+            reservas[i].set('motivo_codigo', 'resposta_recebida')
+            $app.save(reservas[i])
+            reservasLiberadas++
+          }
+        } catch (errR) {
+          $app.logger().warn('evento: falha ao liberar reservas', 'err', String(errR))
+        }
+
+        // 4. PAUSA registrada (índice único por pessoa ativa) — se já existe, é a mesma proteção
+        let pausaId = ''
+        let pausaEstado = 'criada'
+        try {
+          const colPausa = $app.findCollectionByNameOrId('pausas_resposta')
+          const pausa = new Record(colPausa)
+          pausa.set('pessoa', pessoaId)
+          pausa.set('evento', reg.id)
+          pausa.set('evento_id', eventoId)
+          pausa.set('classificacao', classificacao)
+          pausa.set('estado', 'ativa')
+          if (canal) pausa.set('canal', canal)
+          pausa.set('motivo_codigo', 'resposta_recebida')
+          pausa.set('motivo', 'Pessoa respondeu (' + classificacao + '): humano assume.')
+          if (body.ocorrido_em) pausa.set('ocorrido_em', String(body.ocorrido_em))
+          pausa.set('recebido_em', new Date().toISOString().replace('T', ' '))
+          pausa.set('owner', e.auth.id)
+          pausa.set('ambiente', 'teste')
+          $app.save(pausa)
+          pausaId = pausa.id
+        } catch (errPausa) {
+          // já existe pausa ativa para a pessoa: a proteção é a MESMA, não é erro
+          pausaEstado = 'ja_ativa'
+          try {
+            const existentes = $app.findRecordsByFilter(
+              'pausas_resposta',
+              "pessoa = {:p} && ambiente = 'teste' && estado = 'ativa'",
+              '',
+              1,
+              0,
+              { p: pessoaId },
+            )
+            if (existentes.length > 0) pausaId = existentes[0].id
+          } catch (_) {}
+        }
+
+        // 5. PASSAGEM ÚNICA (índice único por evento) — o mesmo evento nunca duplica
+        let passagemId = ''
+        let passagemEstado = 'criada'
+        try {
+          const colPass = $app.findCollectionByNameOrId('passagens')
+          const pass = new Record(colPass)
+          pass.set('pessoa', pessoaId)
+          pass.set('evento', reg.id)
+          pass.set('evento_id', eventoId)
+          // produto: herda da cadência pausada (não vem do payload — o evento não manda nisso).
+          // Sem cadência ativa, a passagem fica sem produto e isso é correto: não inventamos.
+          try {
+            const cad = $app.findRecordsByFilter(
+              'cadencias_ativas',
+              "pessoa = {:p} && ambiente = 'teste' && estado = 'pausada'",
+              '-updated',
+              1,
+              0,
+              { p: pessoaId },
+            )
+            if (cad.length > 0 && cad[0].getString('produto'))
+              pass.set('produto', cad[0].getString('produto'))
+          } catch (_) {}
+          if (canal) pass.set('canal', canal)
+          pass.set('classificacao', classificacao)
+          pass.set('status', 'aguardando')
+          // resumo FACTUAL — sem opinião, sem resumo inventado
+          pass.set(
+            'resumo',
+            'Resposta de ' + classificacao + ' recebida' + (canal ? ' por ' + canal : '') + '.',
+          )
+          pass.set('motivo_codigo', 'resposta_recebida')
+          pass.set('motivo', 'Resposta interrompeu a cadência e exige continuidade humana.')
+          // dono: NUNCA chutar sócio por fallback. Sem mapeamento → pendente de revisão.
+          pass.set('dono_pendente', true)
+          pass.set('owner', e.auth.id)
+          pass.set('ambiente', 'teste')
+          $app.save(pass)
+          passagemId = pass.id
+        } catch (errPass) {
+          passagemEstado = 'ja_existe'
+          try {
+            const existentes = $app.findRecordsByFilter(
+              'passagens',
+              'evento_id = {:e} && ambiente = {:a}',
+              '',
+              1,
+              0,
+              { e: eventoId, a: 'teste' },
+            )
+            if (existentes.length > 0) passagemId = existentes[0].id
+          } catch (_) {}
+        }
+
+        efeitos.resposta = {
+          classificacao: classificacao,
+          cadencias_pausadas: cadenciasPausadas,
+          toques_cancelados: toquesCancelados,
+          reservas_liberadas: reservasLiberadas,
+          pausa: pausaEstado,
+          pausaId: pausaId,
+          passagem: passagemEstado,
+          passagemId: passagemId,
+        }
+      }
+
+      reg.set('resultado', JSON.stringify(efeitos))
       $app.save(reg)
 
       return e.json(200, {
@@ -163,6 +354,8 @@ routerAdd(
         eventoId: eventoId,
         reciboId: reg.id,
         payloadHash: hash,
+        classificacao: classificacao || null,
+        efeitos: efeitos.resposta || null,
         detalhe: 'Evento de teste registrado (nenhum despacho externo).',
       })
     } catch (err) {

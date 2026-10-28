@@ -73,6 +73,30 @@ routerAdd(
     }
     detalhes.push({ motivo_codigo: 'sem_bloqueio', motivo: 'Sem bloqueio ativo.' })
 
+    // ---- 2.5 PAUSA POR RESPOSTA (SPEC-2-004 / F2-T09) ----
+    // Quem respondeu está com um humano, não com o agente. Sem esta checagem a política
+    // diria "elegível" e o agente proporia toque para uma pessoa que acabou de responder —
+    // exatamente o oposto do que a resposta significa.
+    try {
+      const pausas = $app.findRecordsByFilter(
+        'pausas_resposta',
+        "pessoa = {:p} && ambiente = 'teste' && estado = 'ativa'",
+        '',
+        1,
+        0,
+        { p: pessoaId },
+      )
+      if (pausas.length > 0) {
+        return responder(
+          false,
+          'pausa_resposta',
+          'Pessoa respondeu (' +
+            pausas[0].getString('classificacao') +
+            '): a conversa está com um humano e nenhum toque é elegível.',
+        )
+      }
+    } catch (_) {}
+
     // ---- 3. coorte ----
     let coorte = ''
     try {
