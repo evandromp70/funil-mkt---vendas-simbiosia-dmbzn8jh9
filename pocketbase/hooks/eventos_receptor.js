@@ -177,6 +177,42 @@ routerAdd(
 
       const efeitos = { tipo: tipo, canal: canal, efeito: 'registrado' }
 
+      // ---- FATO COMERCIAL: primeira abordagem (SPEC-2-005 / F2-T12) ----
+      // A confirmação simulada é o que produz fato confirmado. Agendamento ou aprovação não.
+      // O PRIMEIRO instante é preservado: se já existe, não move.
+      if (tipo === 'toque_confirmado' && pessoaId) {
+        const confEm = String(body.ocorrido_em || '') || new Date().toISOString()
+        let primeiraMudou = false
+        let primeiraValor = ''
+        try {
+          const leadsDaPessoa = $app.findRecordsByFilter('leads', 'pessoa = {:p}', '', 50, 0, {
+            p: pessoaId,
+          })
+          for (let i = 0; i < leadsDaPessoa.length; i++) {
+            const l = leadsDaPessoa[i]
+            const ja = String(l.getString('primeira_abordagem_em') || '')
+            if (ja) {
+              primeiraValor = ja
+              continue
+            }
+            l.set('primeira_abordagem_em', confEm)
+            $app.save(l)
+            primeiraValor = confEm
+            primeiraMudou = true
+          }
+        } catch (errAb) {
+          efeitos.erro_primeira_abordagem = String(errAb)
+          $app.logger().error('evento: falha ao gravar primeira abordagem', 'err', String(errAb))
+        }
+        if (primeiraValor) {
+          efeitos.comercial = {
+            primeira_abordagem_em: primeiraValor,
+            primeira_mudou: primeiraMudou,
+            confirmado_em: confEm,
+          }
+        }
+      }
+
       // O EVENTO PRECISA EXISTIR ANTES das relações que apontam para ele.
       // Causa raiz de um defeito real (28/10): `pausa.set('evento', reg.id)` era chamado antes
       // deste save, então reg.id estava VAZIO, a relação obrigatória falhava e o catch de baixo
@@ -556,7 +592,7 @@ routerAdd(
 
       // monta o objeto SEM spread: a VM do hook rejeita `...` e derrubava a rota com 500
       let respostaPublica = null
-      if (efeitos.resposta || efeitos.saida) {
+      if (efeitos.resposta || efeitos.saida || efeitos.comercial) {
         respostaPublica = {}
         if (efeitos.resposta) {
           const chavesR = Object.keys(efeitos.resposta)
@@ -564,6 +600,8 @@ routerAdd(
             respostaPublica[chavesR[i]] = efeitos.resposta[chavesR[i]]
         }
         if (efeitos.saida) respostaPublica.saida = efeitos.saida
+        // FATO COMERCIAL (F2-T12): primeira abordagem exposta ao chamador
+        if (efeitos.comercial) respostaPublica.comercial = efeitos.comercial
       }
 
       return e.json(200, {

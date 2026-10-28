@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T23:32:29.158Z",
+  "generatedAt": "2026-10-28T23:34:04.445Z",
   "collections": [
     {
       "name": "users",
@@ -864,6 +864,12 @@
         {
           "name": "dono_padrao_passagem",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "comercial_revisao_seq",
+          "type": "number",
           "required": false,
           "system": false
         }
@@ -4512,6 +4518,93 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX idx_passagem_evento ON passagens (evento_id, ambiente)"
+      ]
+    },
+    {
+      "name": "comercial_exportacoes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "documento_hash",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "total_eventos",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pessoa_filtro",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aplicado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aplicado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "ambiente",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "teste"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_exportacao_hash ON comercial_exportacoes (documento_hash, ambiente)"
       ]
     }
   ]
