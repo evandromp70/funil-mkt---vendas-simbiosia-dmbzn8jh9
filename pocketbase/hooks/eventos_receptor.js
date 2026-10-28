@@ -48,6 +48,8 @@ routerAdd(
       'payload',
       'ambiente',
       'modo',
+      // SPEC-2-004: classificação da resposta, fornecida por FIXTURE DETERMINÍSTICA nesta fase
+      'classificacao',
     ]
     for (const k of Object.keys(body)) {
       if (CAMPOS.indexOf(k) === -1) return e.badRequestError('Campo não previsto no evento: ' + k)
