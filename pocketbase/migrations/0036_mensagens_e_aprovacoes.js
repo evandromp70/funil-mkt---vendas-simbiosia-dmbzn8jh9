@@ -1,5 +1,7 @@
 // SPEC-2-002 (F2-T06): mensagens e aprovações vinculadas — CA-2-002-03.
 // Migração ADITIVA. Cria mensagens e aprovacoes.
+// (reaplicada em 28/10: a 0036 não constava aplicada após o apply anterior — forçando nova
+// avaliação do ordinal pelo runtime.)
 //
 // A aprovação vincula um HASH do conteúdo, não um booleano. Mudou o conteúdo, o hash muda e a
 // aprovação deixa de valer. A verificação real é recalculada na hora de usar (rota pode-executar).
