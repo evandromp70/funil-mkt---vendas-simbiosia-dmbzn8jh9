@@ -202,12 +202,17 @@ routerAdd(
     } catch (_) {}
 
     let notaValor = null
+    let letraValor = ''
     if (produtoId) {
       try {
         const ps = $app.findRecordsByFilter('pontuacoes', 'produto = {:pr}', '-created', 1, 0, {
           pr: produtoId,
         })
-        if (ps.length > 0) notaValor = Number(ps[0].get('valor') || 0)
+        if (ps.length > 0) {
+          notaValor = Number(ps[0].get('valor') || 0)
+          const fa = ps[0].get('faixa')
+          if (fa && typeof fa === 'object') letraValor = String(fa.letra || '')
+        }
       } catch (_) {}
     }
 
@@ -215,6 +220,8 @@ routerAdd(
     let notaMinima = 0
     let politicaVersao = 0
     let temPolitica = false
+    let faixaMinimaPolitica = ''
+    let notaPisoPolitica = 0
     try {
       const pols = $app.findRecordsByFilter(
         'politicas_coorte',
@@ -229,6 +236,8 @@ routerAdd(
         exigeAprovacao = pols[0].getBool('exige_aprovacao_mensagem')
         notaMinima = Number(pols[0].get('nota_minima') || 0)
         politicaVersao = Number(pols[0].get('versao') || 0)
+        faixaMinimaPolitica = String(pols[0].getString('faixa_minima') || '').trim()
+        notaPisoPolitica = Number(pols[0].get('nota_minima_piso') || 0)
       }
     } catch (_) {}
 
@@ -274,6 +283,44 @@ routerAdd(
         decisao = 'ja_em_cadencia'
         motivo = 'cadencia_ativa_existente'
         resumo = 'Já em cadência: a pessoa tem uma cadência ativa.'
+      } else if (faixaMinimaPolitica) {
+        // portão por LETRA (decisão do José, 28/10) + piso absoluto
+        const ORDEM_F = { A: 4, B: 3, C: 2, D: 1 }
+        const letraObtida = String(letraValor || '')
+        if (!letraObtida) {
+          decisao = 'aguardar_aprovacao'
+          motivo = 'sem_faixa_calculada'
+          resumo = 'Aguardando: não há faixa calculada para esta pessoa.'
+        } else if ((ORDEM_F[letraObtida] || 0) < (ORDEM_F[faixaMinimaPolitica] || 0)) {
+          decisao = 'nao_elegivel'
+          motivo = 'faixa_abaixo_do_minimo'
+          resumo =
+            'Não elegível: faixa ' + letraObtida + ' abaixo da mínima ' + faixaMinimaPolitica + '.'
+        } else if (notaPisoPolitica > 0 && notaValor !== null && notaValor < notaPisoPolitica) {
+          decisao = 'nao_elegivel'
+          motivo = 'nota_abaixo_do_piso'
+          resumo =
+            'Não elegível: faixa ' +
+            letraObtida +
+            ' mas nota ' +
+            String(notaValor) +
+            ' abaixo do piso ' +
+            String(notaPisoPolitica) +
+            '.'
+        } else {
+          decisao = 'propor_toque'
+          motivo = 'condicoes_atendidas'
+          resumo =
+            'Propor toque para ' +
+            nomePessoa +
+            ' no produto ' +
+            String(produto.nome) +
+            ' (faixa ' +
+            letraObtida +
+            ', coorte ' +
+            coorte +
+            ').'
+        }
       } else if (notaValor !== null && notaValor < notaMinima) {
         decisao = 'nao_elegivel'
         motivo = 'nota_abaixo_do_minimo'

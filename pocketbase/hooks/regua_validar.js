@@ -92,6 +92,19 @@ onRecordCreate((e) => {
         )
     }
   }
+  // A é SEMPRE a faixa mais alta. Sem esta trava, uma régua invertida (A de 0 a 50,
+  // D de 90 a 100) é aceita sem erro e o lead de melhor fit aparece como D — o pior
+  // resultado possível, e ninguém percebe, porque a validação só olhava lacuna/sobreposição.
+  // Na ordenação ascendente, A precisa ser a ÚLTIMA.
+  const ultima = ordenadas[ordenadas.length - 1]
+  if (String(ultima.letra) !== 'A')
+    throw new BadRequestError(
+      'A faixa A deve ser a mais alta: a maior faixa encontrada é ' +
+        ultima.letra +
+        ' (até ' +
+        ultima.ate +
+        '). Inverta as faixas para que A fique no topo.',
+    )
 
   // ---- status nasce rascunho ----
   if (!rec.getString('status')) rec.set('status', 'rascunho')
@@ -249,6 +262,16 @@ onRecordUpdate((e) => {
           )
       }
     }
+    // Mesma trava do create: A sempre no topo.
+    const ultimaUp = ordenadas[ordenadas.length - 1]
+    if (String(ultimaUp.letra) !== 'A')
+      throw new BadRequestError(
+        'A faixa A deve ser a mais alta: a maior faixa encontrada é ' +
+          ultimaUp.letra +
+          ' (até ' +
+          ultimaUp.ate +
+          '). Inverta as faixas para que A fique no topo.',
+      )
 
     const conteudo = {
       metodo: rec.getString('metodo'),

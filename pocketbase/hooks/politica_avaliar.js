@@ -199,21 +199,61 @@ routerAdd(
       })
     }
 
-    // ---- 7. nota mínima ----
-    const notaMinima = politica.getInt('nota_minima')
-    if (notaMinima > 0) {
-      let nota = null
-      try {
-        const notas = $app.findRecordsByFilter(
-          'pontuacoes',
-          "lead.pessoa = {:p} && ambiente = {:a} && status = 'calculada'",
-          '-created',
-          1,
-          0,
-          { p: pessoaId, a: ambiente },
+    // ---- 7. elegibilidade por LETRA + piso absoluto (decisão do José, 28/10) ----
+    // A LETRA porta a cadência, não a nota solta: cada produto tem a sua régua e o mesmo
+    // número significa coisas diferentes; a letra carrega o julgamento da régua.
+    // Piso absoluto = trava final contra régua generosa demais.
+    const faixaMinima = String(politica.getString('faixa_minima') || '').trim()
+    const notaPiso = Number(politica.get('nota_minima_piso') || 0)
+    const ORDEM_FAIXA = { A: 4, B: 3, C: 2, D: 1 }
+    const notaAntiga = Number(politica.get('nota_minima') || 0)
+
+    let nota = null
+    let letra = ''
+    try {
+      const notas = $app.findRecordsByFilter(
+        'pontuacoes',
+        "lead.pessoa = {:p} && ambiente = {:a} && status = 'calculada'",
+        '-created',
+        1,
+        0,
+        { p: pessoaId, a: ambiente },
+      )
+      if (notas.length > 0) {
+        nota = Number(notas[0].get('valor') || 0)
+        const fa = notas[0].get('faixa')
+        if (fa && typeof fa === 'object') letra = String(fa.letra || '')
+      }
+    } catch (_) {}
+
+    if (faixaMinima) {
+      if (nota === null || !letra) {
+        return responder(
+          false,
+          'sem_nota',
+          'Política exige faixa mínima ' + faixaMinima + ' e a pessoa não tem faixa calculada.',
         )
-        if (notas.length > 0) nota = notas[0].getInt('valor')
-      } catch (_) {}
+      }
+      if ((ORDEM_FAIXA[letra] || 0) < (ORDEM_FAIXA[faixaMinima] || 0)) {
+        return responder(
+          false,
+          'faixa_abaixo_minimo',
+          'Faixa ' + letra + ' abaixo da mínima ' + faixaMinima + '.',
+        )
+      }
+      if (notaPiso > 0 && nota < notaPiso) {
+        return responder(
+          false,
+          'nota_abaixo_piso',
+          'Faixa ' + letra + ' mas nota ' + nota + ' abaixo do piso absoluto ' + notaPiso + '.',
+        )
+      }
+      detalhes.push({
+        motivo_codigo: 'faixa_ok',
+        motivo: 'Faixa ' + letra + ' >= ' + faixaMinima + ' (nota ' + nota + ')',
+      })
+    } else if (notaAntiga > 0) {
+      const notaMinima = notaAntiga
       if (nota === null) {
         return responder(
           false,
