@@ -303,7 +303,7 @@ routerAdd(
       })
     } catch (err) {
       $app.logger().error('falha ao aprovar', 'err', String(err))
-      return e.internalServerError('Não foi possível aprovar a mensagem')
+      return e.internalServerError('Não foi possível aprovar a mensagem: ' + String(err))
     }
   },
   $apis.requireAuth(),
