@@ -13,6 +13,7 @@ import Cadastro from './pages/Cadastro'
 import Importar from './pages/Importar'
 import Produtos from './pages/Produtos'
 import Listas from './pages/Listas'
+import Aprovacoes from './pages/Aprovacoes'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -95,6 +96,14 @@ const App = () => (
               element={
                 <Protected>
                   <Listas />
+                </Protected>
+              }
+            />
+            <Route
+              path="/aprovacoes"
+              element={
+                <Protected>
+                  <Aprovacoes />
                 </Protected>
               }
             />
