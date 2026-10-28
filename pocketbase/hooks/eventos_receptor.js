@@ -528,6 +528,18 @@ routerAdd(
       reg.set('resultado', JSON.stringify(efeitos))
       $app.save(reg)
 
+      // monta o objeto SEM spread: a VM do hook rejeita `...` e derrubava a rota com 500
+      let respostaPublica = null
+      if (efeitos.resposta || efeitos.saida) {
+        respostaPublica = {}
+        if (efeitos.resposta) {
+          const chavesR = Object.keys(efeitos.resposta)
+          for (let i = 0; i < chavesR.length; i++)
+            respostaPublica[chavesR[i]] = efeitos.resposta[chavesR[i]]
+        }
+        if (efeitos.saida) respostaPublica.saida = efeitos.saida
+      }
+
       return e.json(200, {
         estado: 'aplicado',
         eventoId: eventoId,
@@ -538,13 +550,7 @@ routerAdd(
         // Antes só `efeitos.resposta` era exposto, então uma SAÍDA — que é efeito de bloqueio,
         // não de pausa — respondia `efeitos: null` mesmo tendo criado o bloqueio. O chamador
         // ficava sem saber que a proteção foi aplicada.
-        efeitos:
-          efeitos.resposta || efeitos.saida
-            ? {
-                ...(efeitos.resposta || {}),
-                ...(efeitos.saida ? { saida: efeitos.saida } : {}),
-              }
-            : null,
+        efeitos: respostaPublica,
         detalhe: 'Evento de teste registrado (nenhum despacho externo).',
       })
     } catch (err) {
