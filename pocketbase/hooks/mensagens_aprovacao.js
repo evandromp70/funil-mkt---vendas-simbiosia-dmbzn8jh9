@@ -1,4 +1,5 @@
 // SPEC-2-002 (F2-T06): mensagens e aprovação vinculada — CA-2-002-03.
+// v2 (28/10): recarga forçada do hook — a rota não respondia (404) após o apply anterior.
 //
 // POST /backend/v1/mensagens/criar      { pessoaId, produtoId, canal, remetenteId?, conteudo, coorte? }
 // POST /backend/v1/mensagens/editar     { mensagemId, conteudo?, canal?, remetenteId? }
