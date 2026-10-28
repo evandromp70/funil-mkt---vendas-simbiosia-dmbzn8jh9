@@ -1,5 +1,6 @@
 // SPEC-2-001 (F2-T02): transição de estado comercial — CA-2-001-02/03.
 // POST /backend/v1/comercial/transicionar
+// (F2-T02, v0.0.131: re-sync de manifest após remover hook temporário)
 // { contextoId, para, motivo, motivoCodigo?, revisaoEsperada, eventoId? }
 //
 // Regras (cada uma tem prova em tests/comercial.test.mjs):
