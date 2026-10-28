@@ -392,6 +392,139 @@ routerAdd(
         }
       }
 
+      // ---- BLOQUEIO GLOBAL POR PEDIDO DE SAÍDA (SPEC-2-004 / F2-T10 / CA-2-004-02) ----
+      // Só 'saida' bloqueia. Desinteresse simples NÃO vira opt-out (provado na suíte).
+      //
+      // O bloqueio vale para a IDENTIDADE EFETIVA, não só para o id desta pessoa: reimportação,
+      // troca de produto ou alias NÃO eliminam o bloqueio. Se valesse só pelo id, bastaria o
+      // mesmo contato entrar por outra base para voltar a receber toque — que é exatamente o que
+      // a pessoa pediu para não acontecer.
+      if (pessoaId && classificacao === 'saida') {
+        // 1. identidade efetiva: componente conexo de aliases (mesma lógica de cadencias_unicidade)
+        const idBaseSaida = (p) => {
+          const g = p.getString('sync_global_id')
+          return g && String(g).trim() ? String(g).trim() : p.id
+        }
+        const vizinhos = {}
+        try {
+          const aliases = $app.findRecordsByFilter(
+            'aliases_identidade',
+            "status = 'ativo'",
+            '',
+            500,
+            0,
+            {},
+          )
+          for (let i = 0; i < aliases.length; i++) {
+            const o = String(aliases[i].getString('origem_global') || '').trim()
+            const d = String(aliases[i].getString('destino_global') || '').trim()
+            if (!o || !d || o === d) continue
+            if (!vizinhos[o]) vizinhos[o] = []
+            if (!vizinhos[d]) vizinhos[d] = []
+            if (vizinhos[o].indexOf(d) === -1) vizinhos[o].push(d)
+            if (vizinhos[d].indexOf(o) === -1) vizinhos[d].push(o)
+          }
+        } catch (_) {}
+        const raizSaida = (id) => {
+          const visto = {}
+          const fila = [id]
+          visto[id] = true
+          let menor = id
+          while (fila.length > 0) {
+            const atual = fila.shift()
+            if (String(atual) < String(menor)) menor = atual
+            const vs = vizinhos[atual] || []
+            for (let j = 0; j < vs.length; j++) {
+              if (!visto[vs[j]]) {
+                visto[vs[j]] = true
+                fila.push(vs[j])
+              }
+            }
+          }
+          return menor
+        }
+
+        let identidadeSaida = ''
+        let bloqueiosCriados = 0
+        try {
+          const pessoaSaida = $app.findRecordById('pessoas', pessoaId)
+          identidadeSaida = raizSaida(idBaseSaida(pessoaSaida))
+
+          // todas as pessoas que resolvem para a MESMA identidade efetiva
+          const todasPessoas = $app.findRecordsByFilter('pessoas', '', '', 5000, 0, {})
+          const doMesmoGrupo = []
+          for (let i = 0; i < todasPessoas.length; i++) {
+            let ident = ''
+            try {
+              ident = raizSaida(idBaseSaida(todasPessoas[i]))
+            } catch (_) {
+              continue
+            }
+            if (ident === identidadeSaida) doMesmoGrupo.push(todasPessoas[i])
+          }
+
+          // um bloqueio por pessoa do grupo; idempotente (o mesmo pedido não duplica)
+          for (let i = 0; i < doMesmoGrupo.length; i++) {
+            const p = doMesmoGrupo[i]
+            let jaTem = false
+            try {
+              const ex = $app.findRecordsByFilter(
+                'bloqueios_contato',
+                "pessoa = {:p} && ambiente = 'teste' && motivo = 'pedido_saida'",
+                '',
+                1,
+                0,
+                { p: p.id },
+              )
+              jaTem = ex.length > 0
+            } catch (_) {}
+            if (jaTem) continue
+
+            try {
+              const colB = $app.findCollectionByNameOrId('bloqueios_contato')
+              const b = new Record(colB)
+              b.set('pessoa', p.id)
+              b.set('identificador_norm', String(identidadeSaida))
+              b.set('motivo', 'pedido_saida')
+              // 'global': vale em todos os produtos e canais, não só na coorte fria
+              b.set('alcance', 'global')
+              b.set('origem', 'evento:' + eventoId)
+              b.set('ambiente', 'teste')
+              $app.save(b)
+              bloqueiosCriados++
+            } catch (errB) {
+              efeitos.erro_bloqueio = String(errB)
+              $app.logger().error('evento: falha ao criar bloqueio', 'err', String(errB))
+            }
+          }
+
+          // pedido de saída também encerra a pausa: o humano não deve mais tentar conversar
+          try {
+            const pausas = $app.findRecordsByFilter(
+              'pausas_resposta',
+              "pessoa = {:p} && ambiente = 'teste' && estado = 'ativa'",
+              '',
+              50,
+              0,
+              { p: pessoaId },
+            )
+            for (let i = 0; i < pausas.length; i++) {
+              pausas[i].set('estado', 'encerrada')
+              pausas[i].set('motivo_codigo', 'pedido_saida')
+              $app.save(pausas[i])
+            }
+          } catch (_) {}
+        } catch (errS) {
+          efeitos.erro_saida = String(errS)
+          $app.logger().error('evento: falha no bloqueio global', 'err', String(errS))
+        }
+
+        efeitos.saida = {
+          identidade_efetiva: identidadeSaida,
+          bloqueios_criados: bloqueiosCriados,
+        }
+      }
+
       reg.set('resultado', JSON.stringify(efeitos))
       $app.save(reg)
 
