@@ -58,10 +58,14 @@ routerAdd(
     let teto = tetoDe('') // padrão, usado no texto de cabeçalho
 
     // contagem de ativas por dono (aguardando + assumida)
+    // O TETO conta apenas o que a pessoa está TOCANDO (status 'assumida'), não a fila dela.
+    // Antes eu contava 'aguardando' também, e o efeito era perverso: o admin mapeava dono em
+    // duas passagens e a primeira assunção já batia no teto, porque a segunda (ainda na fila)
+    // contava como trabalho em andamento. Fila não é carga; carga é o que está na mão.
     const ativasPorDono = {}
     for (let i = 0; i < todas.length; i++) {
       const p = todas[i]
-      if (String(p.getString('status')) === 'resolvida') continue
+      if (String(p.getString('status')) !== 'assumida') continue
       const d = String(p.getString('dono') || '')
       if (!d) continue
       ativasPorDono[d] = (ativasPorDono[d] || 0) + 1
@@ -183,11 +187,11 @@ routerAdd(
           { d: e.auth.id },
         )
         for (let i = 0; i < minhas.length; i++) {
-          // EXCLUI a própria passagem que está sendo assumida: ela já aparece como ativa
-          // (o admin atribuiu o dono), e contá-la fazia a primeira assunção bater no teto
-          // quando o teto é 1. Defeito pego pela suíte.
+          // Carga = passagens ASSUMIDAS por mim. 'aguardando' é fila, não conta.
+          // Excluir a própria (id === p.id) continua necessário pelo caso idempotente.
           if (String(minhas[i].id) === String(p.id)) continue
-          if (String(minhas[i].getString('status')) !== 'resolvida') minhasAtivas++
+          if (String(minhas[i].getString('status')) !== 'assumida') continue
+          minhasAtivas++
         }
       } catch (_) {}
       // A ASSUNÇÃO IDEMPOTENTE só vale se a passagem JÁ ESTÁ ASSUMIDA por mim.
