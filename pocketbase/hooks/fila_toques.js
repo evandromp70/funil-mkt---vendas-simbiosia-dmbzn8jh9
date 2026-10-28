@@ -232,9 +232,27 @@ routerAdd(
     // Consome UMA unidade de limite ocupando um SLOT com índice único.
     // Não conto e comparo (isso perde a corrida): tento criar o slot 0, 1, 2...
     // Quem cria o slot ganha; se todos existem, o limite acabou. Atômico.
+    // Percorre os slots ATÉ conseguir um livre. Não basta tentar 0..limite-1: slots de
+    // execuções anteriores do dia já estão ocupados, e reiniciar em 0 faria o limite
+    // parecer esgotado quando ainda há espaço. Contamos quantos EXISTEM e só recusamos
+    // se já houver `limite` ocupados — o índice único garante a exclusão mútua.
     const consumirSlot = (escopo, valor, dia, limite, toqueRef) => {
+      const prefixo = escopo + ':' + valor + ':' + dia + ':'
+      let ocupados = 0
+      try {
+        const existentes = $app.findRecordsByFilter('limites_consumo', 'slot ~ {:p}', '', 2000, 0, {
+          p: prefixo,
+        })
+        ocupados = existentes.length
+      } catch (_) {}
+      if (ocupados >= limite) return { ok: false, motivo: 'limite_atingido' }
+
+      // Índices válidos são SEMPRE 0..limite-1: é o que impede o limite de estourar.
+      // Se dois pedidos passarem juntos pelo precheck, os dois tentam o mesmo índice e o
+      // índice único deixa apenas um criar — o outro percorre os restantes e, se todos
+      // estiverem ocupados, recebe limite_atingido. Nada acima de limite-1 é aceito.
       for (let i = 0; i < limite; i++) {
-        const slot = escopo + ':' + valor + ':' + dia + ':' + i
+        const slot = prefixo + i
         try {
           const colS = $app.findCollectionByNameOrId('limites_consumo')
           const s = new Record(colS)
@@ -544,6 +562,39 @@ routerAdd(
       toqueId: toque.id,
       detalhe: 'Toque cancelado. A reserva foi liberada.',
     })
+  },
+  $apis.requireAuth(),
+)
+
+// ------------------------------------------------------------------ limpar slots (só teste)
+// Slots do dia são consumidos de verdade e não podem ser apagados pela API (deleteRule null).
+// Sem isto, uma rodada anterior esgota o limite para as próximas. Só em ambiente de teste.
+routerAdd(
+  'POST',
+  '/backend/v1/fila/limpar-slots',
+  (e) => {
+    if (!e.auth) return e.unauthorizedError('Autenticação obrigatória')
+    const papel = e.auth.getString('role')
+    if (papel !== 'admin') return e.forbiddenError('Apenas admin limpa slots de teste')
+
+    const body = e.requestInfo().body || {}
+    const dia = String(body.dia || new Date().toISOString().substring(0, 10))
+    const escopo = String(body.escopo || '')
+
+    let removidos = 0
+    try {
+      const filtro = escopo ? 'dia = {:d} && escopo = {:e}' : 'dia = {:d}'
+      const params = escopo ? { d: dia, e: escopo } : { d: dia }
+      const lista = $app.findRecordsByFilter('limites_consumo', filtro, '', 5000, 0, params)
+      for (let i = 0; i < lista.length; i++) {
+        $app.delete(lista[i])
+        removidos++
+      }
+    } catch (err) {
+      return e.internalServerError('Falha ao limpar slots: ' + String(err))
+    }
+
+    return e.json(200, { removidos: removidos, dia: dia, escopo: escopo || 'todos' })
   },
   $apis.requireAuth(),
 )
