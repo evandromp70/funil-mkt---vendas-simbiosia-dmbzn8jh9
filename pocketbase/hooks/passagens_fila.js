@@ -183,6 +183,10 @@ routerAdd(
           { d: e.auth.id },
         )
         for (let i = 0; i < minhas.length; i++) {
+          // EXCLUI a própria passagem que está sendo assumida: ela já aparece como ativa
+          // (o admin atribuiu o dono), e contá-la fazia a primeira assunção bater no teto
+          // quando o teto é 1. Defeito pego pela suíte.
+          if (String(minhas[i].id) === String(p.id)) continue
           if (String(minhas[i].getString('status')) !== 'resolvida') minhasAtivas++
         }
       } catch (_) {}
