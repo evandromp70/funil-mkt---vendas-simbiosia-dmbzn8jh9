@@ -67,7 +67,24 @@ routerAdd(
       const podeVer = souAdmin || pendente || dono === meuId
       if (!podeVer) continue
 
-      const excedente = dono && ativasPorDono[dono] > teto && status === 'aguardando'
+      // EXCEDENTE: precisa ser marcado mesmo quando a passagem ainda não tem dono.
+      // Antes eu exigia `dono`, então a passagem que ficou aguardando por teto (e que, sem dono,
+      // pode ser de qualquer um) não era marcada — a tela não avisava que estava acima do limite.
+      // Regra: sem dono, é excedente se ALGUM responsável já está no teto; com dono, se o dele
+      // está no teto.
+      let excedente = false
+      if (status === 'aguardando') {
+        if (dono) {
+          excedente = ativasPorDono[dono] > teto
+        } else {
+          for (const k in ativasPorDono) {
+            if (ativasPorDono[k] > teto) {
+              excedente = true
+              break
+            }
+          }
+        }
+      }
 
       visiveis.push({
         id: p.id,
