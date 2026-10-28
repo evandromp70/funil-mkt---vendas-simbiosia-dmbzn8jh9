@@ -47,7 +47,11 @@ routerAdd(
       return g && String(g).trim() ? String(g).trim() : p.id
     }
 
-    const mapaAlias = {}
+    // alias ATIVO: origem_global e destino_global são a MESMA pessoa.
+    // Grafo NÃO direcionado; raiz canônica = MENOR id do componente conectado.
+    // Precisa ser simétrico: mapa de dois sentidos com "seguir ponteiro" cria ciclo e cada
+    // pessoa voltaria para si mesma (bug pego pelo teste ALIAS ATIVO). Componente resolve.
+    const vizinhos = {}
     try {
       const aliases = $app.findRecordsByFilter(
         'aliases_identidade',
@@ -60,23 +64,31 @@ routerAdd(
       for (let i = 0; i < aliases.length; i++) {
         const o = String(aliases[i].getString('origem_global') || '').trim()
         const d = String(aliases[i].getString('destino_global') || '').trim()
-        if (!o || !d) continue
-        mapaAlias[o] = d
-        if (!mapaAlias[d]) mapaAlias[d] = o
+        if (!o || !d || o === d) continue
+        if (!vizinhos[o]) vizinhos[o] = []
+        if (!vizinhos[d]) vizinhos[d] = []
+        if (vizinhos[o].indexOf(d) === -1) vizinhos[o].push(d)
+        if (vizinhos[d].indexOf(o) === -1) vizinhos[d].push(o)
       }
     } catch (_) {}
 
     const raiz = (id) => {
-      let atual = id
-      const vistos = {}
-      for (let i = 0; i < 10; i++) {
-        if (vistos[atual]) break
-        vistos[atual] = true
-        const prox = mapaAlias[atual]
-        if (!prox || prox === atual) break
-        atual = prox
+      const visto = {}
+      const fila = [id]
+      visto[id] = true
+      let menor = id
+      while (fila.length > 0) {
+        const atual = fila.shift()
+        if (String(atual) < String(menor)) menor = atual
+        const vs = vizinhos[atual] || []
+        for (let i = 0; i < vs.length; i++) {
+          if (!visto[vs[i]]) {
+            visto[vs[i]] = true
+            fila.push(vs[i])
+          }
+        }
       }
-      return atual
+      return menor
     }
 
     const identidade = raiz(idBase(pessoa))
@@ -368,7 +380,7 @@ routerAdd(
       return g && String(g).trim() ? String(g).trim() : p.id
     }
 
-    const mapaAlias = {}
+    const vizinhos = {}
     try {
       const aliases = $app.findRecordsByFilter(
         'aliases_identidade',
@@ -381,23 +393,31 @@ routerAdd(
       for (let i = 0; i < aliases.length; i++) {
         const o = String(aliases[i].getString('origem_global') || '').trim()
         const d = String(aliases[i].getString('destino_global') || '').trim()
-        if (!o || !d) continue
-        mapaAlias[o] = d
-        if (!mapaAlias[d]) mapaAlias[d] = o
+        if (!o || !d || o === d) continue
+        if (!vizinhos[o]) vizinhos[o] = []
+        if (!vizinhos[d]) vizinhos[d] = []
+        if (vizinhos[o].indexOf(d) === -1) vizinhos[o].push(d)
+        if (vizinhos[d].indexOf(o) === -1) vizinhos[d].push(o)
       }
     } catch (_) {}
 
     const raiz = (id) => {
-      let atual = id
-      const vistos = {}
-      for (let i = 0; i < 10; i++) {
-        if (vistos[atual]) break
-        vistos[atual] = true
-        const prox = mapaAlias[atual]
-        if (!prox || prox === atual) break
-        atual = prox
+      const visto = {}
+      const fila = [id]
+      visto[id] = true
+      let menor = id
+      while (fila.length > 0) {
+        const atual = fila.shift()
+        if (String(atual) < String(menor)) menor = atual
+        const vs = vizinhos[atual] || []
+        for (let i = 0; i < vs.length; i++) {
+          if (!visto[vs[i]]) {
+            visto[vs[i]] = true
+            fila.push(vs[i])
+          }
+        }
       }
-      return atual
+      return menor
     }
 
     const identidade = raiz(idBase(pessoa))
@@ -417,7 +437,7 @@ routerAdd(
     return e.json(200, {
       pessoaId: pessoaId,
       identidadeEfetiva: identidade,
-      temAlias: Object.keys(mapaAlias).length > 0,
+      temAlias: Object.keys(vizinhos).length > 0,
       cadenciaAtiva: ativa,
     })
   },
