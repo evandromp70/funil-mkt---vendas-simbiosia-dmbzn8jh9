@@ -134,20 +134,24 @@ export default function ComercialRetorno() {
                     <tbody data-testid="tabela-eventos">
                       {fx.eventos.map((ev, i) => (
                         <tr key={i} className="border-b">
-                          <td className="py-2 font-mono text-xs">{ev.pessoa_global_id}</td>
-                          <td className="py-2">
-                            {ev.primeira_abordagem_em?.slice(0, 19).replace('T', ' ')}
+                          <td className="py-2 font-mono text-xs">
+                            {ev.payload?.pessoa_global_id || ev.entidade_global_id}
                           </td>
                           <td className="py-2">
-                            {ev.bloqueio_global ? (
+                            {(ev.payload?.primeira_abordagem_em || ev.ocorrido_em || '')
+                              .slice(0, 19)
+                              .replace('T', ' ')}
+                          </td>
+                          <td className="py-2">
+                            {ev.payload?.bloqueio_global ? (
                               <Badge variant="destructive">
-                                {ev.bloqueio_motivo || 'bloqueado'}
+                                {ev.payload?.motivo || 'bloqueado'}
                               </Badge>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
                           </td>
-                          <td className="py-2">{ev.comercial_revisao}</td>
+                          <td className="py-2">{ev.revisao}</td>
                         </tr>
                       ))}
                     </tbody>
