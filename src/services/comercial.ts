@@ -6,16 +6,27 @@ import pb from '@/lib/pocketbase/client'
 //   - Monta a fixture no Funil (autoridade comercial) e baixa como arquivo.
 //   - Registra que aquela exportação foi aplicada (hash), para duplicata não substituir fato.
 //   - NÃO faz HTTP para a Fábrica. Quem aplica é o operador, no backend TESTE da outra ponta.
+// O contrato v1 herdado é FECHADO: o envelope tem os campos de controle e o FATO vive dentro
+// de `payload`. Ler direto do envelope mostra tela vazia — o dado está um nível abaixo.
 export type EventoComercial = {
-  tipo_evento: string
-  contexto_global_id: string
-  pessoa_global_id: string
-  primeira_abordagem_em: string
-  bloqueio_global: boolean
-  bloqueio_motivo: string
-  comercial_revisao: number
-  fonte: string
+  contrato_versao: number
+  evento_id: string
+  origem: string
   ambiente: string
+  tipo_evento: string
+  dominio: string
+  entidade_global_id: string
+  revisao: number
+  payload_hash: string
+  ocorrido_em: string
+  referencia_ator_mapeada: string
+  payload: {
+    contexto_global_id?: string
+    pessoa_global_id?: string
+    primeira_abordagem_em?: string
+    bloqueio_global?: boolean
+    motivo?: string
+  }
 }
 
 export type FixtureComercial = {
