@@ -54,6 +54,28 @@ routerAdd(
     const relatorio = []
     let totalApagado = 0
 
+    // PASSADAS REPETIDAS: referência obrigatória (produto → regras, pessoa → origens) trava o
+    // delete do pai na primeira volta. Uma única passada deixa resíduo — foi o que aconteceu
+    // (879 apagados e 298 sobraram). Repetir até não sobrar nada.
+    if (executar) {
+      for (let volta = 0; volta < 8; volta++) {
+        let nestaVolta = 0
+        for (let a2 = 0; a2 < alvos.length; a2++) {
+          try {
+            const regs = $app.findRecordsByFilter(alvos[a2], "id != ''", '', 1000, 0, {})
+            for (let i2 = 0; i2 < regs.length; i2++) {
+              try {
+                $app.delete(regs[i2])
+                nestaVolta++
+              } catch (_) {}
+            }
+          } catch (_) {}
+        }
+        totalApagado += nestaVolta
+        if (nestaVolta === 0) break
+      }
+    }
+
     for (let a = 0; a < alvos.length; a++) {
       const nome = alvos[a]
       let col
@@ -86,17 +108,13 @@ routerAdd(
         continue
       }
 
-      let apagados = 0
-      for (let i = 0; i < registros.length; i++) {
-        try {
-          $app.delete(registros[i])
-          apagados++
-        } catch (_) {
-          // referência obrigatória ou guarda de negócio: fica para a próxima passada
-        }
-      }
-      totalApagado += apagados
-      relatorio.push({ colecao: nome, estado: 'executado', apagados })
+      // a deleção já aconteceu nas passadas acima; aqui só reportamos o que restou
+      relatorio.push({
+        colecao: nome,
+        estado: 'executado',
+        apagados: 0,
+        restantes: registros.length,
+      })
     }
 
     // ---------- PRESERVADOS: conferência explícita ----------
