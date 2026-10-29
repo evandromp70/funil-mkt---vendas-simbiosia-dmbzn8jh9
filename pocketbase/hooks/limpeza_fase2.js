@@ -25,8 +25,14 @@ routerAdd(
     const body = e.requestInfo().body || {}
     const executar = body.executar === true
 
-    // ordem importa: filhos antes dos pais
+    // ordem importa: filhos antes dos pais.
+    // DESCOBERTA (29/10): três coleções que eu NÃO tinha mapeado seguram referência OBRIGATÓRIA
+    // e, sem apagá-las, o pai nunca sai: `pausas_resposta` (→ pessoa, evento), `jobs_pontuacao`
+    // (→ produto, regra) e `toques` (→ cadência). Coleção esquecida = pai travado para sempre.
     const alvos = [
+      'pausas_resposta',
+      'toques',
+      'jobs_pontuacao',
       'pessoas_origens',
       'conflitos_cadastro',
       'fusoes_cadastro',
