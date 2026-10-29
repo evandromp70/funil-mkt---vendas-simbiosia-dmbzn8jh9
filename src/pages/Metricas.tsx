@@ -17,6 +17,7 @@ type Contagens = {
   leads: number
   respostas: number
   passagens: number
+  passagens_abertas: number
   oportunidades: number | null
   estado_oportunidade: string
 }
@@ -246,10 +247,13 @@ export default function Metricas() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-2xl" data-testid="contagem-passagens">
-              {num(painel?.contagens.passagens)}
+            <CardTitle className="text-2xl" data-testid="contagem-passagens-abertas">
+              {num(painel?.contagens.passagens_abertas)}
             </CardTitle>
-            <CardDescription>Conversas na fila humana</CardDescription>
+            <CardDescription>
+              Conversas aguardando você
+              <span className="block text-xs">de {num(painel?.contagens.passagens)} no total</span>
+            </CardDescription>
           </CardHeader>
         </Card>
 
