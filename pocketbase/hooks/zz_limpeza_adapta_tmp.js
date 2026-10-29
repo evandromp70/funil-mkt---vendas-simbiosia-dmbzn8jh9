@@ -276,5 +276,5 @@ routerAdd(
       erros: erro,
     })
   },
-  $apis.requireRecordAuth(),
+  $apis.requireAuth(),
 )
