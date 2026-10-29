@@ -409,14 +409,7 @@ routerAdd(
         estado_oportunidade: estadoOportunidade,
       },
       definicao: defVersao === null ? null : { versao: defVersao },
-      // DIAGNÓSTICO TEMPORÁRIO: quero ver o que o hook REALMENTE lê do campo JSON.
-      _diag: {
-        tipo_criterios: defCriterios === null ? 'null' : typeof defCriterios,
-        chaves: defCriterios === null ? [] : Object.keys(defCriterios),
-        contar: defCriterios === null ? '' : String(defCriterios.contar || ''),
-        respostas_chaves: Object.keys(respostasPessoas).length,
-        passagens_chaves: Object.keys(passagensPessoas).length,
-      },
+
       custo: {
         total: custoTotal,
         estado: estadoCusto,
