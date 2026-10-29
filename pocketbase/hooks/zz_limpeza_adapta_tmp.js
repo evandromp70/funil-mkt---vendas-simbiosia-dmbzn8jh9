@@ -269,6 +269,19 @@ routerAdd(
     }
     relatorio.ficam = fica
 
+    // ---- 9. dump de pausas_resposta (403 na API externa, mas legível aqui dentro) --
+    // Sem isto o backup ficaria incompleto: a coleção nega list/view a usuário comum.
+    if (String(body.dump || '') === 'pausas_resposta') {
+      try {
+        return e.json(200, {
+          dump: 'pausas_resposta',
+          itens: $app.findRecordsByFilter('pausas_resposta', "id != ''", '', 5000, 0, {}),
+        })
+      } catch (err) {
+        return e.json(200, { dump: 'pausas_resposta', erro: String(err) })
+      }
+    }
+
     return e.json(200, {
       modo: modo,
       executou: executar,
