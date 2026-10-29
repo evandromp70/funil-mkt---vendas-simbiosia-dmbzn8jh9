@@ -237,16 +237,20 @@ routerAdd(
         pessoa_global_id: pessoaGlobal,
         primeira_abordagem_em: primeira,
       }
-      // Envelope do contrato v1: `evento_id` tem de seguir origem:ambiente:evento:<chave>.
-      // A chave é determinística (pessoa + tipo) — reexportar o mesmo fato NÃO cria evento novo,
-      // e é isso que faz a aplicação ser idempotente do lado da Fábrica.
+      // Envelope do contrato v1 — dois padrões que a Fábrica exige e que eu não podia inventar:
+      //   entidade_global_id: FAB:<ambiente>:<tipo>:<chave>  (tipos: empresa|pessoa|contexto|produto)
+      //   evento_id:          funil:<ambiente>:evento:<chave>
+      // A chave é determinística, então reexportar o mesmo fato NÃO cria evento novo — é o que
+      // torna a aplicação idempotente. O sync_global_id do Funil é preservado dentro da chave.
+      const chaveIdentidade = 'pessoa:teste:' + pessoaGlobal
+      const entidadeFAB = 'FAB:teste:pessoa:' + pessoaGlobal
       eventos.push({
         contrato_versao: 1,
-        evento_id: 'funil:teste:evento:comercial-' + pessoaGlobal,
+        evento_id: 'funil:teste:evento:comercial-' + chaveIdentidade,
         origem: 'funil',
         ambiente: 'teste',
         tipo_evento: 'estado_comercial',
-        entidade_global_id: pessoaGlobal,
+        entidade_global_id: entidadeFAB,
         dominio: 'comercial',
         revisao: 1,
         payload_hash: hashCanonico(payloadComercial),
@@ -265,11 +269,11 @@ routerAdd(
         }
         eventos.push({
           contrato_versao: 1,
-          evento_id: 'funil:teste:evento:protecao-' + pessoaGlobal,
+          evento_id: 'funil:teste:evento:protecao-' + chaveIdentidade,
           origem: 'funil',
           ambiente: 'teste',
           tipo_evento: 'protecao_global',
-          entidade_global_id: pessoaGlobal,
+          entidade_global_id: entidadeFAB,
           dominio: 'protecao',
           revisao: 1,
           payload_hash: hashCanonico(payloadProtecao),
