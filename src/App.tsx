@@ -16,6 +16,7 @@ import Listas from './pages/Listas'
 import Aprovacoes from './pages/Aprovacoes'
 import Passagens from './pages/Passagens'
 import AgenteContexto from './pages/AgenteContexto'
+import ComercialRetorno from './pages/ComercialRetorno'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -122,6 +123,14 @@ const App = () => (
               element={
                 <Protected>
                   <Passagens />
+                </Protected>
+              }
+            />
+            <Route
+              path="/comercial-retorno"
+              element={
+                <Protected>
+                  <ComercialRetorno />
                 </Protected>
               }
             />

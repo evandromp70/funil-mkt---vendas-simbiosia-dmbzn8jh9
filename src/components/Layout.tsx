@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 
 // marcador de build visível no rodapé — acaba a dúvida de qual bundle o navegador rodou
 // (atualizado manualmente a cada versão publicada)
-const VERSAO_BUILD = 'v0.0.176'
+const VERSAO_BUILD = 'v0.0.187'
 
 export default function Layout() {
   const { isAuthenticated, signOut } = useAuth()
@@ -46,6 +46,13 @@ export default function Layout() {
                 </Link>
                 <Link to="/passagens" className="hover:text-[#10454f]" data-testid="menu-passagens">
                   Conversas
+                </Link>
+                <Link
+                  to="/comercial-retorno"
+                  className="hover:text-[#10454f]"
+                  data-testid="menu-comercial-retorno"
+                >
+                  Retorno à Fábrica
                 </Link>
                 <Link to="/aprovacoes" className="hover:text-[#10454f]">
                   Aprovações
