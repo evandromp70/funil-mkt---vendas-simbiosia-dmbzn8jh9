@@ -119,6 +119,36 @@ routerAdd(
 
 // Exporta a fixture que o operador aplica MANUALMENTE no backend TESTE da Fábrica.
 // Nenhum HTTP é feito daqui: a rota só MONTA o documento.
+// hash canônico do payload — o contrato exige `payload_hash` e a Fábrica recusa sem ele.
+// Chaves ordenadas e valores serializados de forma estável: mesmo conteúdo, mesmo hash.
+const hashCanonico = (valor) => {
+  const canon = (v) => {
+    if (v === null || typeof v === 'undefined') return 'null'
+    if (typeof v === 'number') return isFinite(v) ? String(v) : 'null'
+    if (typeof v === 'boolean') return v ? 'true' : 'false'
+    if (typeof v === 'string') return JSON.stringify(v)
+    if (Array.isArray(v)) {
+      const itens = []
+      for (let i = 0; i < v.length; i++) itens.push(canon(v[i]))
+      return '[' + itens.join(',') + ']'
+    }
+    const chaves = Object.keys(v).sort()
+    const pares = []
+    for (let k = 0; k < chaves.length; k++)
+      pares.push(JSON.stringify(chaves[k]) + ':' + canon(v[chaves[k]]))
+    return '{' + pares.join(',') + '}'
+  }
+  const texto = canon(valor)
+  let h1 = 5381
+  let h2 = 52711
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto.charCodeAt(i)
+    h1 = ((h1 * 33) ^ c) >>> 0
+    h2 = ((h2 * 31) ^ c) >>> 0
+  }
+  return 'h' + h1.toString(16) + h2.toString(16)
+}
+
 routerAdd(
   'GET',
   '/backend/v1/comercial/exportar-fixture',
@@ -191,18 +221,54 @@ routerAdd(
         }
       } catch (_) {}
 
-      const ev = {
-        tipo_evento: 'estado_comercial',
-        contexto_global_id: contextoGlobal || pessoaGlobal,
+      // CONTRATO v1 HERDADO (Fase 1) — o formato é fechado e a Fábrica recusa o que não declara:
+      //   campos de fora: ambiente, tipo_evento, entidade_global_id, dominio, revisao,
+      //                   payload_hash, payload, ocorrido_em, referencia_ator_mapeada
+      //   dentro de payload: contexto_global_id, pessoa_global_id, primeira_abordagem_em /
+      //                   bloqueio_global + motivo
+      // Descobri isso aplicando de verdade: meu primeiro formato era "campo não declarado:
+      // bloqueio_global". Cada domínio tem seu tipo_evento — estado_comercial e protecao_global
+      // são eventos SEPARADOS, não um só com tudo dentro.
+      const contextoGid = contextoGlobal || pessoaGlobal
+
+      // 1) fato comercial: primeira abordagem
+      const payloadComercial = {
+        contexto_global_id: contextoGid,
         pessoa_global_id: pessoaGlobal,
         primeira_abordagem_em: primeira,
-        bloqueio_global: bloqueio,
-        bloqueio_motivo: motivoBloqueio,
-        comercial_revisao: 1,
-        fonte: 'funil',
-        ambiente: 'teste',
       }
-      eventos.push(ev)
+      eventos.push({
+        ambiente: 'teste',
+        tipo_evento: 'estado_comercial',
+        entidade_global_id: pessoaGlobal,
+        dominio: 'comercial',
+        revisao: 1,
+        payload_hash: hashCanonico(payloadComercial),
+        payload: payloadComercial,
+        ocorrido_em: primeira,
+        referencia_ator_mapeada: '',
+      })
+
+      // 2) proteção: só quando existe bloqueio (domínio próprio, evento próprio)
+      if (bloqueio) {
+        const payloadProtecao = {
+          contexto_global_id: contextoGid,
+          pessoa_global_id: pessoaGlobal,
+          bloqueio_global: true,
+          motivo: motivoBloqueio,
+        }
+        eventos.push({
+          ambiente: 'teste',
+          tipo_evento: 'protecao_global',
+          entidade_global_id: pessoaGlobal,
+          dominio: 'protecao',
+          revisao: 1,
+          payload_hash: hashCanonico(payloadProtecao),
+          payload: payloadProtecao,
+          ocorrido_em: primeira,
+          referencia_ator_mapeada: '',
+        })
+      }
     }
 
     return e.json(200, {
