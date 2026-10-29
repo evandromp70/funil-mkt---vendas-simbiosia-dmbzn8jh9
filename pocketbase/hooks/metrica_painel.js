@@ -317,15 +317,28 @@ routerAdd(
       )
       if (d.length > 0) {
         defVersao = Number(d[0].get('versao') || 0)
-        // ATENÇÃO: campo JSON na VM do PocketBase pode chegar como STRING, não como objeto.
-        // Foi o defeito que fez a definição v5 "existir" e a oportunidade continuar null:
-        // o código procurava `criterios.contar` dentro de uma string. Aceitar os dois formatos.
-        const c = d[0].get('criterios')
-        if (c && typeof c === 'object') {
-          defCriterios = c
-        } else if (typeof c === 'string' && c.length > 0) {
+        // CAMPO JSON NA VM DO POCKETBASE — armadilha real, diagnosticada em produção:
+        // `record.get('criterios')` devolve um OBJETO GO (chaves 0,1,2…, marshalJSON, scan,
+        // value), não o JSON. Ler `.contar` dava vazio, o critério nunca casava e a
+        // oportunidade ficava null MESMO com a definição aprovada e correta.
+        // Caminho confiável: getString() (JSON serializado) + JSON.parse().
+        let textoCriterios = ''
+        try {
+          textoCriterios = String(d[0].getString('criterios') || '')
+        } catch (_) {
+          textoCriterios = ''
+        }
+        if (!textoCriterios) {
+          // fallback: se getString não trouxer, tenta serializar o próprio valor
           try {
-            const parsed = JSON.parse(c)
+            const cru = d[0].get('criterios')
+            if (cru && typeof cru === 'object' && typeof cru.contar === 'string')
+              textoCriterios = JSON.stringify({ contar: cru.contar })
+          } catch (_) {}
+        }
+        if (textoCriterios) {
+          try {
+            const parsed = JSON.parse(textoCriterios)
             defCriterios = parsed && typeof parsed === 'object' ? parsed : {}
           } catch (_) {
             defCriterios = {}
