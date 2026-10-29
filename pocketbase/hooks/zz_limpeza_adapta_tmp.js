@@ -1,4 +1,5 @@
 // TEMPORÁRIO (29/10/2026): limpeza do resíduo de teste antes dos dados reais da ADAPTA.
+// v2 — reaplicado para forçar o registro da rota (integrations falhou no apply anterior).
 // REMOVER DO AR imediatamente após o uso (deixar 410).
 //
 // Motivo: as coleções de negócio têm deleteRule null (só superusuário apaga) e a API externa
