@@ -1,4 +1,5 @@
 // ROTA DESATIVADA — limpeza do resíduo ADAPTA executada em 29/10/2026.
+// v-final: republicado para alinhar o bundle de produção ao estado atual do backend.
 //
 // O hook anterior (zz_limpeza_adapta_tmp.js) foi mantido aqui como 410 em vez de apagado:
 // no dia 28/10 apagar o arquivo NÃO tirou a rota do ar (o apply falhou em "file not found on
