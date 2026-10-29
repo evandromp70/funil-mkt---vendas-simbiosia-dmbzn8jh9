@@ -55,21 +55,31 @@ routerAdd(
     let totalApagado = 0
 
     // PASSADAS REPETIDAS: referência obrigatória (produto → regras, pessoa → origens) trava o
-    // delete do pai na primeira volta. Uma única passada deixa resíduo — foi o que aconteceu
-    // (879 apagados e 298 sobraram). Repetir até não sobrar nada.
+    // delete do pai na primeira volta. Uma única passada deixa resíduo.
+    // DIAGNÓSTICO: guardo o PRIMEIRO erro de cada coleção em vez de engolir no catch vazio —
+    // sem isso, "apagados: 0" não diz por quê e eu fico adivinhando.
+    const erros = {}
     if (executar) {
       for (let volta = 0; volta < 8; volta++) {
         let nestaVolta = 0
         for (let a2 = 0; a2 < alvos.length; a2++) {
+          const nome2 = alvos[a2]
           try {
-            const regs = $app.findRecordsByFilter(alvos[a2], "id != ''", '', 1000, 0, {})
+            const regs = $app.findRecordsByFilter(nome2, "id != ''", '', 1000, 0, {})
+            if (regs.length > 0 && !erros[nome2]) erros[nome2] = 'encontrados ' + regs.length
             for (let i2 = 0; i2 < regs.length; i2++) {
               try {
                 $app.delete(regs[i2])
                 nestaVolta++
-              } catch (_) {}
+              } catch (errDel) {
+                // primeiro erro REAL de deleção por coleção — a informação que faltava
+                if (!erros[nome2] || erros[nome2].indexOf('DELETE:') !== 0)
+                  erros[nome2] = 'DELETE: ' + String(errDel)
+              }
             }
-          } catch (_) {}
+          } catch (errFind) {
+            if (!erros[nome2]) erros[nome2] = 'FIND: ' + String(errFind)
+          }
         }
         totalApagado += nestaVolta
         if (nestaVolta === 0) break
@@ -171,6 +181,7 @@ routerAdd(
       total_apagado: totalApagado,
       por_colecao: relatorio,
       preservados: preservados,
+      erros: erros,
       aviso: executar
         ? 'Limpeza executada. Rode de novo até total_apagado = 0 (referências cruzadas).'
         : 'Nada foi apagado. Envie {"executar": true} para executar.',
