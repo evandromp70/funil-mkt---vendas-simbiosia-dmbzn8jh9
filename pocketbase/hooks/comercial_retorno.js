@@ -127,34 +127,46 @@ routerAdd(
     if (String(e.auth.getString('role')) !== 'admin')
       return e.forbiddenError('Somente admin exporta fixture.')
 
-    // hash canônico do payload — o contrato exige `payload_hash` e a Fábrica recusa sem ele.
+    // HASH DO PAYLOAD — tem de ser EXATAMENTE o algoritmo da Fábrica, senão ela recusa com
+    // "payload_hash diverge do payload". Não é um hash qualquer: é a canonização JSON com
+    // chaves ordenadas + FNV-1a combinado, truncado em 64 caracteres hex.
     // INLINE no callback: a VM do PocketBase não enxerga função top-level (ReferenceError).
     const hashCanonico = (valor) => {
-      const canon = (v) => {
-        if (v === null || typeof v === 'undefined') return 'null'
-        if (typeof v === 'number') return isFinite(v) ? String(v) : 'null'
-        if (typeof v === 'boolean') return v ? 'true' : 'false'
-        if (typeof v === 'string') return JSON.stringify(v)
+      const jsonCanonico = (v) => {
+        const t = typeof v
+        if (v === null || t === 'undefined') return 'null'
+        if (t === 'number') return isFinite(v) ? String(v) : 'null'
+        if (t === 'boolean') return v ? 'true' : 'false'
+        if (t === 'string') return JSON.stringify(v)
         if (Array.isArray(v)) {
           const itens = []
-          for (let i = 0; i < v.length; i++) itens.push(canon(v[i]))
+          for (let i = 0; i < v.length; i++) itens.push(jsonCanonico(v[i]))
           return '[' + itens.join(',') + ']'
         }
         const chaves = Object.keys(v).sort()
         const pares = []
-        for (let k = 0; k < chaves.length; k++)
-          pares.push(JSON.stringify(chaves[k]) + ':' + canon(v[chaves[k]]))
+        for (let k = 0; k < chaves.length; k++) {
+          const c = chaves[k]
+          const val = v[c]
+          if (val === undefined) continue
+          pares.push(JSON.stringify(c) + ':' + jsonCanonico(val))
+        }
         return '{' + pares.join(',') + '}'
       }
-      const texto = canon(valor)
-      let h1 = 5381
-      let h2 = 52711
+      const texto = jsonCanonico(valor)
+      let h1 = 0x811c9dc5
+      let h2 = 0x1000193
       for (let i = 0; i < texto.length; i++) {
         const c = texto.charCodeAt(i)
-        h1 = ((h1 * 33) ^ c) >>> 0
-        h2 = ((h2 * 31) ^ c) >>> 0
+        h1 = (h1 ^ c) >>> 0
+        h1 = Math.imul(h1, 0x01000193) >>> 0
+        h2 = (h2 + Math.imul(c, i + 1)) >>> 0
       }
-      return 'h' + h1.toString(16) + h2.toString(16)
+      let saida = ''
+      for (let k = 0; k < 8; k++) {
+        saida += ((h1 ^ (h2 + Math.imul(k, 0x9e3779b9))) >>> 0).toString(16).padStart(8, '0')
+      }
+      return saida.substring(0, 64)
     }
 
     const query = e.requestInfo().query || {}
