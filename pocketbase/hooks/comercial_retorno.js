@@ -4,6 +4,9 @@
 //   POST /backend/v1/comercial/registrar-abordagem  — grava o FATO comercial (primeira abordagem)
 //   GET  /backend/v1/comercial/exportar-fixture     — emite a fixture local (sem HTTP entre apps)
 //
+// F2-T13: cada evento carrega a revisão REAL do seu domínio (antes era 1 fixo). Sem isso não
+// existe "revisão velha" e a regra que impede revisão antiga de liberar alguém não seria provável.
+//
 // REGRAS DURAS (provadas em tests/retorno_abordagem.test.mjs):
 //   1. PRIMEIRA abordagem: o primeiro instante confirmado é PRESERVADO. Reprocessar não move a
 //      data — "primeira" quer dizer primeira.
@@ -117,6 +120,58 @@ routerAdd(
   $apis.requireAuth(),
 )
 
+// Promove uma nova revisão de PROTEÇÃO para a pessoa (CA-2-005-02).
+//
+// Existe porque proteção é decisão humana e datada: cada decisão nova precisa de uma revisão
+// maior, para a Fábrica poder recusar uma revisão antiga chegando depois. Reprocessar a mesma
+// decisão NÃO cria revisão nova — só devolve a atual.
+routerAdd(
+  'POST',
+  '/backend/v1/comercial/promover-protecao',
+  (e) => {
+    if (!e.auth) return e.unauthorizedError('Autenticação obrigatória')
+
+    const body = e.requestInfo().body || {}
+    const pessoaId = String(body.pessoaId || '')
+    if (!pessoaId) return e.badRequestError('pessoaId é obrigatório')
+
+    let bloq
+    try {
+      const bs = $app.findRecordsByFilter(
+        'bloqueios_contato',
+        "pessoa = {:p} && ambiente = 'teste'",
+        '',
+        1,
+        0,
+        { p: pessoaId },
+      )
+      if (bs.length === 0) return e.notFoundError('Nenhum bloqueio ativo para esta pessoa')
+      bloq = bs[0]
+    } catch (err) {
+      return e.internalServerError('Falha ao ler bloqueio: ' + String(err))
+    }
+
+    const atual = Number(bloq.get('revisao') || 0)
+    const nova = atual + 1
+    bloq.set('revisao', nova)
+    try {
+      $app.save(bloq)
+    } catch (err) {
+      return e.internalServerError('Falha ao promover revisão: ' + String(err))
+    }
+
+    return e.json(200, {
+      estado: 'promovido',
+      pessoaId: pessoaId,
+      revisao_anterior: atual,
+      revisao: nova,
+      motivo: String(bloq.getString('motivo') || ''),
+      alcance: String(bloq.getString('alcance') || ''),
+    })
+  },
+  $apis.requireAuth(),
+)
+
 // Exporta a fixture que o operador aplica MANUALMENTE no backend TESTE da Fábrica.
 // Nenhum HTTP é feito daqui: a rota só MONTA o documento.
 routerAdd(
@@ -206,6 +261,7 @@ routerAdd(
       }
 
       let contextoGlobal = ''
+      let revisaoComercial = 1
       try {
         const ctxs = $app.findRecordsByFilter(
           'contextos_comerciais',
@@ -215,13 +271,18 @@ routerAdd(
           0,
           { p: pid },
         )
-        if (ctxs.length > 0)
+        if (ctxs.length > 0) {
           contextoGlobal = String(ctxs[0].getString('sync_global_id') || '') || ctxs[0].id
+          // REVISÃO DO DOMÍNIO COMERCIAL — a do próprio contexto, não um número inventado
+          const rc = Number(ctxs[0].get('revisao') || 0)
+          revisaoComercial = rc > 0 ? rc : 1
+        }
       } catch (_) {}
 
       // proteção (SPEC-2-004): bloqueio global vai como fato comercial
       let bloqueio = false
       let motivoBloqueio = ''
+      let revisaoProtecao = 0
       try {
         const bs = $app.findRecordsByFilter(
           'bloqueios_contato',
@@ -234,6 +295,9 @@ routerAdd(
         if (bs.length > 0) {
           bloqueio = true
           motivoBloqueio = String(bs[0].getString('motivo') || '')
+          // REVISÃO DO DOMÍNIO PROTEÇÃO — independente da comercial e da de cadastro
+          const rp = Number(bs[0].get('revisao') || 0)
+          revisaoProtecao = rp > 0 ? rp : 1
         }
       } catch (_) {}
 
@@ -260,15 +324,18 @@ routerAdd(
       // torna a aplicação idempotente. O sync_global_id do Funil é preservado dentro da chave.
       const chaveIdentidade = 'pessoa:teste:' + pessoaGlobal
       const entidadeFAB = 'FAB:teste:pessoa:' + pessoaGlobal
+      // O evento_id carrega a REVISÃO: revisão nova é um FATO novo, e precisa de identidade
+      // própria. Se o id fosse fixo, uma revisão nova chegaria como "duplicado" da anterior e a
+      // atualização nunca seria aplicada — o oposto do que a reconciliação existe para fazer.
       eventos.push({
         contrato_versao: 1,
-        evento_id: 'funil:teste:evento:comercial-' + chaveIdentidade,
+        evento_id: 'funil:teste:evento:comercial-' + chaveIdentidade + '-r' + revisaoComercial,
         origem: 'funil',
         ambiente: 'teste',
         tipo_evento: 'estado_comercial',
         entidade_global_id: entidadeFAB,
         dominio: 'comercial',
-        revisao: 1,
+        revisao: revisaoComercial,
         payload_hash: hashCanonico(payloadComercial),
         payload: payloadComercial,
         ocorrido_em: primeira,
@@ -288,13 +355,13 @@ routerAdd(
         }
         eventos.push({
           contrato_versao: 1,
-          evento_id: 'funil:teste:evento:protecao-' + chaveIdentidade,
+          evento_id: 'funil:teste:evento:protecao-' + chaveIdentidade + '-r' + revisaoProtecao,
           origem: 'funil',
           ambiente: 'teste',
           tipo_evento: 'protecao_global',
           entidade_global_id: entidadeFAB,
           dominio: 'protecao',
-          revisao: 1,
+          revisao: revisaoProtecao,
           payload_hash: hashCanonico(payloadProtecao),
           payload: payloadProtecao,
           ocorrido_em: primeira,
