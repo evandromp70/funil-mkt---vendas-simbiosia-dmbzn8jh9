@@ -169,6 +169,10 @@ routerAdd(
       return saida.substring(0, 64)
     }
 
+    // Referência de ator para o mapeamento aprovado na Fábrica (sync_mapeamentos).
+    // Nesta fase o ator é o SISTEMA, não uma pessoa: não existe usuário local atravessando.
+    const REFERENCIA_ATOR = 'sistema:funil'
+
     const query = e.requestInfo().query || {}
     const pessoaIdFiltro = String(query.pessoaId || '')
 
@@ -268,7 +272,10 @@ routerAdd(
         payload_hash: hashCanonico(payloadComercial),
         payload: payloadComercial,
         ocorrido_em: primeira,
-        referencia_ator_mapeada: '',
+        // ATOR: a Fábrica exige um mapeamento aprovado (sync_mapeamentos) por referência de ator.
+        // Sem ele o evento fica PENDENTE — comportamento correto, não erro. Esta referência é
+        // fixa porque, nesta fase, o ator é o próprio sistema, não uma pessoa.
+        referencia_ator_mapeada: REFERENCIA_ATOR,
       })
 
       // 2) proteção: só quando existe bloqueio (domínio próprio, evento próprio)
@@ -291,7 +298,7 @@ routerAdd(
           payload_hash: hashCanonico(payloadProtecao),
           payload: payloadProtecao,
           ocorrido_em: primeira,
-          referencia_ator_mapeada: '',
+          referencia_ator_mapeada: REFERENCIA_ATOR,
         })
       }
     }
