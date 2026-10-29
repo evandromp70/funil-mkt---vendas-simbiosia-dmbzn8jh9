@@ -317,8 +317,22 @@ routerAdd(
       )
       if (d.length > 0) {
         defVersao = Number(d[0].get('versao') || 0)
+        // ATENÇÃO: campo JSON na VM do PocketBase pode chegar como STRING, não como objeto.
+        // Foi o defeito que fez a definição v5 "existir" e a oportunidade continuar null:
+        // o código procurava `criterios.contar` dentro de uma string. Aceitar os dois formatos.
         const c = d[0].get('criterios')
-        defCriterios = c && typeof c === 'object' ? c : {}
+        if (c && typeof c === 'object') {
+          defCriterios = c
+        } else if (typeof c === 'string' && c.length > 0) {
+          try {
+            const parsed = JSON.parse(c)
+            defCriterios = parsed && typeof parsed === 'object' ? parsed : {}
+          } catch (_) {
+            defCriterios = {}
+          }
+        } else {
+          defCriterios = {}
+        }
       }
     } catch (_) {}
 
