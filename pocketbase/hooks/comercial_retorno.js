@@ -237,7 +237,13 @@ routerAdd(
         pessoa_global_id: pessoaGlobal,
         primeira_abordagem_em: primeira,
       }
+      // Envelope do contrato v1: `evento_id` tem de seguir origem:ambiente:evento:<chave>.
+      // A chave é determinística (pessoa + tipo) — reexportar o mesmo fato NÃO cria evento novo,
+      // e é isso que faz a aplicação ser idempotente do lado da Fábrica.
       eventos.push({
+        contrato_versao: 1,
+        evento_id: 'funil:teste:evento:comercial-' + pessoaGlobal,
+        origem: 'funil',
         ambiente: 'teste',
         tipo_evento: 'estado_comercial',
         entidade_global_id: pessoaGlobal,
@@ -258,6 +264,9 @@ routerAdd(
           motivo: motivoBloqueio,
         }
         eventos.push({
+          contrato_versao: 1,
+          evento_id: 'funil:teste:evento:protecao-' + pessoaGlobal,
+          origem: 'funil',
           ambiente: 'teste',
           tipo_evento: 'protecao_global',
           entidade_global_id: pessoaGlobal,
