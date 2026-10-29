@@ -258,32 +258,48 @@ routerAdd(
       }
     } catch (_) {}
 
+    // RESPOSTAS: contadas pelas PASSAGENS CLASSIFICADAS (é o fato que o Funil registra da
+    // resposta). NÃO uso `pausas_resposta` para isso: ela existe para PAUSAR a cadência, e toda
+    // resposta cria uma passagem — ler as duas fontes daria o mesmo número duas vezes e daria a
+    // impressão falsa de dois indicadores independentes. (Foi o que aconteceu: 110 e 110.)
     let respostasTotal = 0
     const respostasPessoas = {}
     try {
-      const rs = $app.findRecordsByFilter('pausas_resposta', 'ambiente = {:a}', '', 2000, 0, {
+      const ps2 = $app.findRecordsByFilter('passagens', 'ambiente = {:a}', '', 2000, 0, {
         a: ambiente,
       })
-      for (let i = 0; i < rs.length; i++) {
-        const r = rs[i]
-        const pid = String(r.getString('pessoa') || '')
+      for (let i = 0; i < ps2.length; i++) {
+        const p = ps2[i]
+        const dono = String(p.getString('dono') || '')
+        if (!souAdmin && dono !== e.auth.id) continue
+        if (fDono && dono !== fDono) continue
+        const pid = String(p.getString('pessoa') || '')
         if (fCoorte && pessoasPorCoorte[pid] !== fCoorte) continue
         if (fProduto && produtoPorPessoa[pid] !== fProduto) continue
-        // ACL: resposta de pessoa fora da visão do vendedor não conta
-        let permitido = souAdmin
-        if (!permitido) {
-          for (let k = 0; k < alvo.length; k++) {
-            if (String(alvo[k].getString('pessoa') || '') === pid) {
-              permitido = true
-              break
-            }
-          }
-        }
-        if (!permitido) continue
-        const chave = pid || r.id
+        const chave = pid || p.id
         if (respostasPessoas[chave]) continue
         respostasPessoas[chave] = true
         respostasTotal++
+      }
+    } catch (_) {}
+
+    // PASSAGENS EM ABERTO: subconjunto que ainda espera decisão humana — é o que importa
+    // operacionalmente. Contar o total e chamar de "respostas" esconderia a fila real.
+    let passagensAbertas = 0
+    try {
+      const ps3 = $app.findRecordsByFilter('passagens', 'ambiente = {:a}', '', 2000, 0, {
+        a: ambiente,
+      })
+      for (let i = 0; i < ps3.length; i++) {
+        const p = ps3[i]
+        if (String(p.getString('status')) === 'resolvida') continue
+        const dono = String(p.getString('dono') || '')
+        if (!souAdmin && dono !== e.auth.id) continue
+        if (fDono && dono !== fDono) continue
+        const pid = String(p.getString('pessoa') || '')
+        if (fCoorte && pessoasPorCoorte[pid] !== fCoorte) continue
+        if (fProduto && produtoPorPessoa[pid] !== fProduto) continue
+        passagensAbertas++
       }
     } catch (_) {}
 
@@ -361,6 +377,7 @@ routerAdd(
         leads: alvo.length,
         respostas: respostasTotal,
         passagens: passagensTotal,
+        passagens_abertas: passagensAbertas,
         oportunidades: oportunidades,
         estado_oportunidade: estadoOportunidade,
       },
