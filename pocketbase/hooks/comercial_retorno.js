@@ -119,36 +119,6 @@ routerAdd(
 
 // Exporta a fixture que o operador aplica MANUALMENTE no backend TESTE da Fábrica.
 // Nenhum HTTP é feito daqui: a rota só MONTA o documento.
-// hash canônico do payload — o contrato exige `payload_hash` e a Fábrica recusa sem ele.
-// Chaves ordenadas e valores serializados de forma estável: mesmo conteúdo, mesmo hash.
-const hashCanonico = (valor) => {
-  const canon = (v) => {
-    if (v === null || typeof v === 'undefined') return 'null'
-    if (typeof v === 'number') return isFinite(v) ? String(v) : 'null'
-    if (typeof v === 'boolean') return v ? 'true' : 'false'
-    if (typeof v === 'string') return JSON.stringify(v)
-    if (Array.isArray(v)) {
-      const itens = []
-      for (let i = 0; i < v.length; i++) itens.push(canon(v[i]))
-      return '[' + itens.join(',') + ']'
-    }
-    const chaves = Object.keys(v).sort()
-    const pares = []
-    for (let k = 0; k < chaves.length; k++)
-      pares.push(JSON.stringify(chaves[k]) + ':' + canon(v[chaves[k]]))
-    return '{' + pares.join(',') + '}'
-  }
-  const texto = canon(valor)
-  let h1 = 5381
-  let h2 = 52711
-  for (let i = 0; i < texto.length; i++) {
-    const c = texto.charCodeAt(i)
-    h1 = ((h1 * 33) ^ c) >>> 0
-    h2 = ((h2 * 31) ^ c) >>> 0
-  }
-  return 'h' + h1.toString(16) + h2.toString(16)
-}
-
 routerAdd(
   'GET',
   '/backend/v1/comercial/exportar-fixture',
@@ -156,6 +126,36 @@ routerAdd(
     if (!e.auth) return e.unauthorizedError('Autenticação obrigatória')
     if (String(e.auth.getString('role')) !== 'admin')
       return e.forbiddenError('Somente admin exporta fixture.')
+
+    // hash canônico do payload — o contrato exige `payload_hash` e a Fábrica recusa sem ele.
+    // INLINE no callback: a VM do PocketBase não enxerga função top-level (ReferenceError).
+    const hashCanonico = (valor) => {
+      const canon = (v) => {
+        if (v === null || typeof v === 'undefined') return 'null'
+        if (typeof v === 'number') return isFinite(v) ? String(v) : 'null'
+        if (typeof v === 'boolean') return v ? 'true' : 'false'
+        if (typeof v === 'string') return JSON.stringify(v)
+        if (Array.isArray(v)) {
+          const itens = []
+          for (let i = 0; i < v.length; i++) itens.push(canon(v[i]))
+          return '[' + itens.join(',') + ']'
+        }
+        const chaves = Object.keys(v).sort()
+        const pares = []
+        for (let k = 0; k < chaves.length; k++)
+          pares.push(JSON.stringify(chaves[k]) + ':' + canon(v[chaves[k]]))
+        return '{' + pares.join(',') + '}'
+      }
+      const texto = canon(valor)
+      let h1 = 5381
+      let h2 = 52711
+      for (let i = 0; i < texto.length; i++) {
+        const c = texto.charCodeAt(i)
+        h1 = ((h1 * 33) ^ c) >>> 0
+        h2 = ((h2 * 31) ^ c) >>> 0
+      }
+      return 'h' + h1.toString(16) + h2.toString(16)
+    }
 
     const query = e.requestInfo().query || {}
     const pessoaIdFiltro = String(query.pessoaId || '')
