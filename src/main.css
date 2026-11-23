@@ -1,7 +1,7 @@
 /* Global styles - Theme, font, utilities, animations and global components */
 
 /* CHANGE THE FONT BELOW TO WHATEVER YOU WANT */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -112,6 +112,15 @@
   section[aria-label='Notifications alt+T'] {
     padding: 0 !important;
     margin: 0 !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
   }
 }
 
@@ -287,4 +296,48 @@
   .animate-spotlight {
     animation: spotlight 2s ease forwards;
   }
+}
+
+/* Identidade visual Simbiosia: painel claro sobre vidro fosco verde-petróleo (referência Dribbble, 23/11/2026) */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 192 45% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 192 45% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 192 45% 9%;
+  --primary: 189 66% 19%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 190 28% 96%;
+  --secondary-foreground: 189 66% 19%;
+  --muted: 190 22% 96%;
+  --muted-foreground: 192 12% 40%;
+  --accent: 166 42% 93%;
+  --accent-foreground: 189 66% 16%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 190 16% 90%;
+  --input: 190 16% 87%;
+  --ring: 166 52% 38%;
+  --radius: 0.875rem;
+  --chart-1: 189 66% 24%;
+  --chart-2: 166 52% 42%;
+  --chart-3: 152 45% 60%;
+  --chart-4: 38 90% 55%;
+  --chart-5: 12 80% 58%;
+}
+
+.stage {
+  background:
+    radial-gradient(62rem 38rem at 6% 4%, hsl(166 52% 27% / 0.95), transparent 62%),
+    radial-gradient(48rem 36rem at 98% 94%, hsl(152 48% 21% / 0.9), transparent 60%),
+    radial-gradient(40rem 30rem at 72% -4%, hsl(190 60% 24% / 0.7), transparent 60%),
+    hsl(192 62% 8%);
+  background-attachment: fixed;
+}
+
+.glass-side {
+  background: linear-gradient(180deg, hsl(0 0% 100% / 0.09), hsl(0 0% 100% / 0.03));
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
 }

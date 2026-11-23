@@ -28,10 +28,10 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center">
+      <Card className="w-full border-0 shadow-none">
         <CardHeader>
-          <CardTitle className="text-[#10454f]">Entrar no Funil</CardTitle>
+          <CardTitle className="text-2xl text-primary">Entrar no Funil</CardTitle>
           <CardDescription>Acesso restrito à equipe Simbiosia (José e Evandro).</CardDescription>
         </CardHeader>
         <CardContent>
@@ -59,11 +59,7 @@ export default function Login() {
               />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button
-              type="submit"
-              className="w-full bg-[#10454f] hover:bg-[#0d3942]"
-              disabled={loading}
-            >
+            <Button type="submit" className="h-11 w-full" disabled={loading}>
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
