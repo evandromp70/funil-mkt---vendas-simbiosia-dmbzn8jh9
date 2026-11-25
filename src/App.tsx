@@ -12,12 +12,14 @@ import Painel from './pages/Painel'
 import Cadastro from './pages/Cadastro'
 import Importar from './pages/Importar'
 import Produtos from './pages/Produtos'
+import Politica from './pages/Politica'
 import Listas from './pages/Listas'
 import Aprovacoes from './pages/Aprovacoes'
 import Passagens from './pages/Passagens'
 import AgenteContexto from './pages/AgenteContexto'
 import ComercialRetorno from './pages/ComercialRetorno'
 import Metricas from './pages/Metricas'
+import McpKeys from './pages/McpKeys'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -38,111 +40,22 @@ const App = () => (
         <Sonner />
         <Routes>
           <Route element={<Layout />}>
-            <Route
-              path="/"
-              element={
-                <Protected>
-                  <Index />
-                </Protected>
-              }
-            />
+            <Route path="/" element={<Protected><Index /></Protected>} />
             <Route path="/login" element={<Login />} />
-            <Route
-              path="/leads/:id"
-              element={
-                <Protected>
-                  <LeadDetail />
-                </Protected>
-              }
-            />
-            <Route
-              path="/usuarios"
-              element={
-                <Protected>
-                  <Usuarios />
-                </Protected>
-              }
-            />
-            <Route
-              path="/painel"
-              element={
-                <Protected>
-                  <Painel />
-                </Protected>
-              }
-            />
-            <Route
-              path="/cadastro"
-              element={
-                <Protected>
-                  <Cadastro />
-                </Protected>
-              }
-            />
-            <Route
-              path="/importar"
-              element={
-                <Protected>
-                  <Importar />
-                </Protected>
-              }
-            />
-            <Route
-              path="/produtos"
-              element={
-                <Protected>
-                  <Produtos />
-                </Protected>
-              }
-            />
-            <Route
-              path="/listas"
-              element={
-                <Protected>
-                  <Listas />
-                </Protected>
-              }
-            />
-            <Route
-              path="/aprovacoes"
-              element={
-                <Protected>
-                  <Aprovacoes />
-                </Protected>
-              }
-            />
-            <Route
-              path="/agente"
-              element={
-                <Protected>
-                  <AgenteContexto />
-                </Protected>
-              }
-            />
-            <Route
-              path="/passagens"
-              element={
-                <Protected>
-                  <Passagens />
-                </Protected>
-              }
-            />
-            <Route
-              path="/comercial-retorno"
-              element={
-                <Protected>
-                  <ComercialRetorno />
-                </Protected>
-              }
-            />
-            <Route
-              path="/metricas"
-              element={
-                <Protected>
-                  <Metricas />
-                </Protected>
-              }
-            />
+            <Route path="/leads/:id" element={<Protected><LeadDetail /></Protected>} />
+            <Route path="/usuarios" element={<Protected><Usuarios /></Protected>} />
+            <Route path="/painel" element={<Protected><Painel /></Protected>} />
+            <Route path="/cadastro" element={<Protected><Cadastro /></Protected>} />
+            <Route path="/importar" element={<Protected><Importar /></Protected>} />
+            <Route path="/produtos" element={<Protected><Produtos /></Protected>} />
+            <Route path="/politica" element={<Protected><Politica /></Protected>} />
+            <Route path="/listas" element={<Protected><Listas /></Protected>} />
+            <Route path="/aprovacoes" element={<Protected><Aprovacoes /></Protected>} />
+            <Route path="/agente" element={<Protected><AgenteContexto /></Protected>} />
+            <Route path="/passagens" element={<Protected><Passagens /></Protected>} />
+            <Route path="/comercial-retorno" element={<Protected><ComercialRetorno /></Protected>} />
+            <Route path="/metricas" element={<Protected><Metricas /></Protected>} />
+            <Route path="/mcp-chaves" element={<Protected><McpKeys /></Protected>} />
             {/* ADD ALL CUSTOM ROUTES MUST BE ADDED HERE */}
           </Route>
           <Route path="*" element={<NotFound />} />
