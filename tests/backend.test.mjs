@@ -11,10 +11,24 @@ const TEST_ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || ''
 
 const SEM_AMBIENTE = !TEST_BACKEND_URL || !TEST_ADMIN_EMAIL || !TEST_ADMIN_PASSWORD
 
-const novoPb = async () => {
+// O backend de teste aplica rate limit (429) na autenticação. Um único ponto de login, com
+// backoff: sem isso o teste fica intermitente por motivo que não tem nada a ver com o produto.
+const novoPb = async (tentativas = 8) => {
   const { default: PocketBase } = await import('pocketbase')
   const pb = new PocketBase(TEST_BACKEND_URL)
-  await pb.collection('users').authWithPassword(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD)
+  let espera = 2000
+  for (let i = 1; i <= tentativas; i++) {
+    try {
+      await pb.collection('users').authWithPassword(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD)
+      return pb
+    } catch (err) {
+      const msg = String(err)
+      const eh429 = msg.indexOf('429') !== -1 || msg.toLowerCase().indexOf('too many') !== -1
+      if (!eh429 || i === tentativas) throw err
+      await new Promise((r) => setTimeout(r, espera))
+      espera = Math.min(espera * 2, 20000)
+    }
+  }
   return pb
 }
 
@@ -107,8 +121,8 @@ test('SEM-EXTERNO: alteração de flags do sistema_config é negada a não-admin
  // vendedor não-admin tenta ligar as integrações externas — tem de ser negado
  const vendedor = new PocketBase(TEST_BACKEND_URL)
  await vendedor.collection('users').authWithPassword(
-   process.env.TEST_VENDEDOR_EMAIL || 'vendedor@simbiosia.com.br',
-   process.env.TEST_VENDEDOR_PASSWORD || 'Vendedor@2026',
+   process.env.TEST_VENDEDOR_EMAIL || '',
+   process.env.TEST_VENDEDOR_PASSWORD || '',
  )
  await assert.rejects(
    vendedor.collection('sistema_config').update(cfg.id, { integracoes_externas_habilitadas: true }),
@@ -149,7 +163,8 @@ test('SEM-EXTERNO: contador por correlação nas 3 rotas (admin autorizado, paus
  }
 })
 
-test('AMBIENTE-RESTORE: backup restaura as mesmas contagens (manifesto)', async (t) => {  if (SEM_AMBIENTE) {
+test('AMBIENTE-RESTORE: backup restaura a fixture própria (contagem por marca)', async (t) => {
+  if (SEM_AMBIENTE) {
     t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
     return
   }
@@ -158,20 +173,53 @@ test('AMBIENTE-RESTORE: backup restaura as mesmas contagens (manifesto)', async 
   const fs = await import('node:fs')
   const root = path.resolve('.')
   const script = path.join(root, 'scripts', 'backup-restauracao.mjs')
-  execFileSync('node', [script, 'backup'], { cwd: root, env: process.env, stdio: 'pipe' })
-  const pb = await novoPb()
-  const extra = await pb.collection('leads').create({
-    owner: pb.authStore.record.id,
-    nome_empresa: 'TESTE Fixture Alterada ' + Date.now(),
-    origem: 'outbound',
-    etapa: 'lista',
-  })
+  const dir = path.join(root, 'tests', '.tmp-backup')
+
+  // Marca única desta execução: o teste só enxerga e só apaga o que ele mesmo criou.
+  const marca = 'RESTORE-T' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+  // 1 login por rodada: o token é emprestado ao script (o backend limita autenticação).
+  let pb
   try {
-    execFileSync('node', [script, 'restaurar'], { cwd: root, env: process.env, stdio: 'pipe' })
-    const pos = JSON.parse(fs.readFileSync(path.join(root, 'tests', '.tmp-backup', 'contagens-pos-restauracao.json'), 'utf8'))
-    const pre = JSON.parse(fs.readFileSync(path.join(root, 'tests', '.tmp-backup', 'contagens-backup.json'), 'utf8'))
-    assert.deepEqual(pos, pre, 'contagens após restauração devem ser iguais às do backup')
+    pb = await novoPb()
+    const token = pb.authStore.token
+    const rodarComToken = (modo) =>
+      execFileSync('node', [script, modo, marca], {
+        cwd: root,
+        env: { ...process.env, RESTORE_TOKEN: token },
+        stdio: 'pipe',
+      })
+
+    rodarComToken('backup')
+    const pre = JSON.parse(fs.readFileSync(path.join(dir, 'contagens-backup.json'), 'utf8'))
+    const totalPre = Object.values(pre).reduce((a, b) => a + (b || 0), 0)
+    assert.ok(totalPre > 0, 'o backup deve conter ao menos uma fixture da marca')
+
+    // Altera o estado: apaga o lead da marca. A restauração tem de trazê-lo de volta.
+    const daMarca = await pb.collection('leads').getFullList({
+      filter: pb.filter('nome_empresa ~ {:m}', { m: marca }),
+    })
+    assert.equal(daMarca.length, 1, 'deve existir exatamente 1 lead da marca')
+    await pb.collection('leads').delete(daMarca[0].id)
+
+    rodarComToken('restaurar')
+    const pos = JSON.parse(fs.readFileSync(path.join(dir, 'contagens-pos-restauracao.json'), 'utf8'))
+    assert.deepEqual(pos, pre, 'contagens POR MARCA após restaurar devem ser iguais às do backup')
+
+    // E o lead voltou de fato, não só a contagem (mesma sessão, sem novo login).
+    const depois = await pb.collection('leads').getFullList({
+      filter: pb.filter('nome_empresa ~ {:m}', { m: marca }),
+    })
+    assert.equal(depois.length, 1, 'o lead da marca deve existir depois da restauração')
   } finally {
-    await pb.collection('leads').delete(extra.id).catch(() => {})
+    // Limpeza: nada da marca fica no banco, mesmo se o teste falhar no meio.
+    try {
+      execFileSync('node', [script, 'limpar', marca], {
+        cwd: root,
+        env: { ...process.env, RESTORE_TOKEN: pb?.authStore.token || '' },
+        stdio: 'pipe',
+      })
+    } catch (_) {
+      // a limpeza falhar não invalida a prova acima; o resíduo aparece no relatório
+    }
   }
 })
