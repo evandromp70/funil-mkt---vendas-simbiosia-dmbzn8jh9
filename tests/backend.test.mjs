@@ -1,6 +1,6 @@
 // SPEC-1-001 (task 20c86bd2): runner de backend — PocketBase SDK contra o backend TESTE.
 // Recusa ambiente desconhecido; nunca imprime autenticação. Os casos AMBIENTE-RESTORE e
-// SEM-EXTERNO (contador por correlação) precisam do backend de teste com credenciais
+// SEM-EXTERNO (contador por despacho) precisam do backend de teste com credenciais
 // sintéticas em ambiente local seguro (variáveis de ambiente, nunca versionadas).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -52,7 +52,7 @@ test('AMBIENTE-RESTORE: sistema_config existe com ambiente de teste e controles 
   assert.equal(cfg.integracoes_externas_habilitadas, false)
 })
 
-test('SEM-EXTERNO: rotas instrumentadas não despacham com pausa ativa (contador por correlação = 0)', async (t) => {
+test('SEM-EXTERNO: rotas instrumentadas não despacham com pausa ativa', async (t) => {
   if (SEM_AMBIENTE) {
     t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
     return
@@ -64,19 +64,25 @@ test('SEM-EXTERNO: rotas instrumentadas não despacham com pausa ativa (contador
     origem: 'outbound',
     etapa: 'lista',
   })
+  // Isolamento por DELTA: mede o total antes e depois. Uma janela de tempo ("últimos 60 s")
+  // pegava o despacho deliberado do controle positivo e ficava intermitente.
   try {
+    const antes = (await pb.collection('teste_despachos').getList(1, 1)).totalItems
     for (const rota of ['gerar-contato', 'sugerir-toque', 'analisar-qualificacao']) {
       const resp = await pb.send(`/backend/v1/funil/${rota}`, {
         method: 'POST',
         body: JSON.stringify({ leadId: lead.id }),
       })
       assert.equal(resp.interceptado, true, `rota ${rota} deveria responder interceptada`)
-      assert.match(String(resp[Object.keys(resp)[0]]), /AMBIENTE DE TESTE/)
+      // A mensagem vem num campo com nome próprio por rota (rascunho, sugestao, analise…).
+      assert.match(
+        JSON.stringify(Object.values(resp)),
+        /AMBIENTE DE TESTE/,
+        `rota ${rota} deve dizer que a chamada foi interceptada no ambiente de teste`,
+      )
     }
-    const despachos = await pb.collection('teste_despachos').getFullList({
-      filter: pb.filter("created > {:quando}", { quando: new Date(Date.now() - 60000).toISOString().replace('T', ' ') }),
-    })
-    assert.equal(despachos.length, 0, 'nenhuma tentativa deveria ser registrada com o portão ativo')
+    const depois = (await pb.collection('teste_despachos').getList(1, 1)).totalItems
+    assert.equal(depois, antes, 'as 3 rotas não podem registrar tentativa de despacho')
   } finally {
     await pb.collection('leads').delete(lead.id)
   }
@@ -102,7 +108,7 @@ test('SEM-EXTERNO (controle positivo interceptado): tentativa deliberada registr
     assert.equal(resp.interceptado, true)
     assert.ok(resp.correlation_id, 'resposta deve trazer o id de correlação')
     const despachos = await pb.collection('teste_despachos').getFullList({
-      filter: pb.filter("correlation_id = {:cid}", { cid: resp.correlation_id }),
+      filter: pb.filter('correlation_id = {:cid}', { cid: resp.correlation_id }),
     })
     assert.equal(despachos.length, 1)
     assert.equal(despachos[0].tentativas, 1)
@@ -112,55 +118,60 @@ test('SEM-EXTERNO (controle positivo interceptado): tentativa deliberada registr
 })
 
 test('SEM-EXTERNO: alteração de flags do sistema_config é negada a não-admin', async (t) => {
- if (SEM_AMBIENTE) {
-   t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
-   return
- }
- const pb = await novoPb()
- const cfg = (await pb.collection('sistema_config').getList(1, 1)).items[0]
- // vendedor não-admin tenta ligar as integrações externas — tem de ser negado
- const vendedor = new PocketBase(TEST_BACKEND_URL)
- await vendedor.collection('users').authWithPassword(
-   process.env.TEST_VENDEDOR_EMAIL || '',
-   process.env.TEST_VENDEDOR_PASSWORD || '',
- )
- await assert.rejects(
-   vendedor.collection('sistema_config').update(cfg.id, { integracoes_externas_habilitadas: true }),
-   (err) => err.status === 403 || err.status === 404,
-   'não-admin não pode alterar flags do sistema',
- )
- // estado persistido conferido: flag continua desligada
- const depois = await pb.collection('sistema_config').getOne(cfg.id)
- assert.equal(depois.integracoes_externas_habilitadas, false)
+  if (SEM_AMBIENTE) {
+    t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
+    return
+  }
+  // Credencial nunca é versionada: o repositório é público. Sem a conta no ambiente, pula.
+  if (!process.env.TEST_VENDEDOR_EMAIL || !process.env.TEST_VENDEDOR_PASSWORD) {
+    t.skip('conta de vendedor não configurada (TEST_VENDEDOR_EMAIL/TEST_VENDEDOR_PASSWORD)')
+    return
+  }
+  const { default: PocketBase } = await import('pocketbase')
+  const pb = await novoPb()
+  const cfg = (await pb.collection('sistema_config').getList(1, 1)).items[0]
+  // vendedor não-admin tenta ligar as integrações externas — tem de ser negado
+  const vendedor = new PocketBase(TEST_BACKEND_URL)
+  await vendedor
+    .collection('users')
+    .authWithPassword(process.env.TEST_VENDEDOR_EMAIL, process.env.TEST_VENDEDOR_PASSWORD)
+  await assert.rejects(
+    vendedor.collection('sistema_config').update(cfg.id, { integracoes_externas_habilitadas: true }),
+    (err) => err.status === 403 || err.status === 404,
+    'não-admin não pode alterar flags do sistema',
+  )
+  // estado persistido conferido: flag continua desligada
+  const depois = await pb.collection('sistema_config').getOne(cfg.id)
+  assert.equal(depois.integracoes_externas_habilitadas, false)
 })
 
-test('SEM-EXTERNO: contador por correlação nas 3 rotas (admin autorizado, pausa ativa)', async (t) => {
- if (SEM_AMBIENTE) {
-   t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
-   return
- }
- const pb = await novoPb()
- const lead = await pb.collection('leads').create({
-   owner: pb.authStore.record.id,
-   nome_empresa: 'TESTE Fornecedor Zero ' + Date.now(),
-   origem: 'outbound',
-   etapa: 'lista',
- })
- try {
-   for (const rota of ['gerar-contato', 'sugerir-toque', 'analisar-qualificacao']) {
-     const resp = await pb.send(`/backend/v1/funil/${rota}`, {
-       method: 'POST',
-       body: JSON.stringify({ leadId: lead.id }),
-     })
-     assert.equal(resp.interceptado, true, `rota ${rota} deveria responder interceptada`)
-   }
-   const despachos = await pb.collection('teste_despachos').getFullList({
-     filter: pb.filter("created > {:quando}", { quando: new Date(Date.now() - 60000).toISOString().replace('T', ' ') }),
-   })
-   assert.equal(despachos.length, 0, 'contador deve permanecer 0 com o portão ativo')
- } finally {
-   await pb.collection('leads').delete(lead.id)
- }
+test('SEM-EXTERNO: as 3 rotas não registram despacho (admin autorizado, pausa ativa)', async (t) => {
+  if (SEM_AMBIENTE) {
+    t.skip('backend de teste não configurado (TEST_BACKEND_URL/credenciais sintéticas ausentes)')
+    return
+  }
+  const pb = await novoPb()
+  const lead = await pb.collection('leads').create({
+    owner: pb.authStore.record.id,
+    nome_empresa: 'TESTE Fornecedor Zero ' + Date.now(),
+    origem: 'outbound',
+    etapa: 'lista',
+  })
+  try {
+    // Delta de contagem: nenhuma das 3 rotas pode registrar tentativa de despacho.
+    const antes = (await pb.collection('teste_despachos').getList(1, 1)).totalItems
+    for (const rota of ['gerar-contato', 'sugerir-toque', 'analisar-qualificacao']) {
+      const resp = await pb.send(`/backend/v1/funil/${rota}`, {
+        method: 'POST',
+        body: JSON.stringify({ leadId: lead.id }),
+      })
+      assert.equal(resp.interceptado, true, `rota ${rota} deveria responder interceptada`)
+    }
+    const depois = (await pb.collection('teste_despachos').getList(1, 1)).totalItems
+    assert.equal(depois, antes, 'contador deve permanecer 0 com o portão ativo')
+  } finally {
+    await pb.collection('leads').delete(lead.id)
+  }
 })
 
 test('AMBIENTE-RESTORE: backup restaura a fixture própria (contagem por marca)', async (t) => {
